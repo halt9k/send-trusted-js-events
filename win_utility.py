@@ -34,12 +34,14 @@ def is_window_normal(handle):
         normal = True
     return normal
 
+
 def get_width(hwnd):
     return GetWindowRect(hwnd)[2] - GetWindowRect(hwnd)[0]
 
 
 def mute(hwnd):
     PressOrdKey(hwnd, ord('M'), True)
+
 
 def activate(hwnd):
     SetFocus(hwnd)
@@ -50,12 +52,12 @@ def run_script(hwnd):
     PressOrdKey(hwnd, ord('R'), False)
 
 
-def initialize_window(hwnd, n):
-    if GetWindowRect(hwnd)[1] > 10:
-        return
-
+def setup_window(hwnd, n):
     sleep(0.2)
     shrink(hwnd, n)
+
+    if GetWindowRect(hwnd)[1] > 10:
+        return
     sleep(0.2)
     mute(hwnd)
     sleep(0.2)
@@ -88,13 +90,19 @@ def click(hwnd, xx, yy):
     print('client ' + str(x) + ' ' + str(y) + ' screen ' + str(xx) + ' ' + str(yy))
 
 
-def click_by_caption(handle, text):
-    # print("    {0:d}: [{1:s}]".format(handle, text))
-    if text.startswith('auto_click '):
-        cords_txt = text.replace('auto_click ', '')
-        # cords_txt = cords_txt.replace('translate(', '')
-        # cords_txt = cords_txt.replace('px, ', ' ')
-        cords_txt = cords_txt.replace(' — Mozilla Firefox', '')
-        # cords = [int(s) for s in cords_txt.split() if (s.isdigit() or s == '-')]
-        cords = [int(float(s)) for s in cords_txt.split()]
-        click(handle, cords[0], cords[1])
+def process_click(hwnd, text):
+    cords = get_cords_from_caption(text)
+    if cords:
+        click(hwnd, cords[0], cords[1])
+
+
+def get_cords_from_caption(text):
+    if not text.startswith('auto_click '):
+        return None
+
+    cords_txt = text.replace('auto_click ', '')
+    # cords_txt = cords_txt.replace('translate(', '')
+    # cords_txt = cords_txt.replace('px, ', ' ')
+    cords_txt = cords_txt.replace(' — Mozilla Firefox', '')
+    # cords = [int(s) for s in cords_txt.split() if (s.isdigit() or s == '-')]
+    return [int(float(s)) for s in cords_txt.split()]

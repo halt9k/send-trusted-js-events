@@ -59,6 +59,7 @@ def click_check():
             n = list(browser_tabs.keys()).index(hwnd)
             setup_window(hwnd, n)
 
+
             if browser_tabs[hwnd].last_text == text:
                 continue
 

@@ -53,15 +53,15 @@ def run_script(hwnd):
 
 
 def setup_window(hwnd, n):
-    sleep(0.2)
-    shrink(hwnd, n)
+    if GetWindowRect(hwnd)[1] <= 10:
+        sleep(0.3)
+        mute(hwnd)
+        sleep(0.3)
+        run_script(hwnd)
 
-    if GetWindowRect(hwnd)[1] > 10:
-        return
+    sleep(0.3)
+    shrink(hwnd, n)
     sleep(0.2)
-    mute(hwnd)
-    sleep(0.2)
-    run_script(hwnd)
 
 
 MOUSEEVENTF_MOVE = 0x0001  # mouse move

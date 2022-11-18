@@ -1,10 +1,9 @@
 from dataclasses import dataclass
 from random import random
 
-from win_func import *
+from win_utility import *
 
 from win_enum import enum_processes, enum_process_windows
-
 
 
 @dataclass
@@ -16,23 +15,51 @@ class TabInfo:
     closed: bool = False
 
 
-sites = {}
+browser_tabs = {}
 
 
 def del_closed_tabs():
-    global sites
+    global browser_tabs
     pop_keys = []
-    for key in sites.keys():
-        if sites[key].closed:
+    for key in browser_tabs.keys():
+        if browser_tabs[key].closed:
             pop_keys += [key]
-        sites[key].closed = True
+        browser_tabs[key].closed = True
 
     for key in pop_keys:
-        sites.pop(key)
+        browser_tabs.pop(key)
+
+
+def test_window_setup(hwnd):
+    wh = get_width(hwnd)
+    return wh in range(40, 400) and is_window_normal(hwnd)
+
+
+def process_window(hwnd, text):
+    if not test_window_setup(hwnd):
+        return
+
+    if hwnd not in browser_tabs.keys():
+        browser_tabs[hwnd] = TabInfo()
+    browser_tabs[hwnd].closed = False
+
+    n = list(browser_tabs.keys()).index(hwnd)
+    setup_window(hwnd, n)
+
+    if browser_tabs[hwnd].last_text == text:
+        return
+
+    browser_tabs[hwnd].total_clicks += 1
+    # if sqrt(sites[hwnd].total) / 20 > random():
+    # print ('Skipped')
+    # continue
+
+    browser_tabs[hwnd].last_text = text
+    process_click(hwnd, text)
 
 
 def click_check():
-    global sites
+    global browser_tabs
     del_closed_tabs()
 
     procs = enum_processes(process_name="firefox.exe")
@@ -43,33 +70,16 @@ def click_check():
 
         # proc_text = "PId {0:d}{1:s}windows:".format(pid, " (File: [{0:s}]) ".format(name) if name else " ")
         # print(proc_text)
-        for handle, text in data:
-            wh = get_width(handle)
-            if (not wh in range(40, 400)) or (not is_window_normal(handle)):
-                continue
-
-            if handle not in sites.keys():
-                sites[handle] = TabInfo()
-            sites[handle].closed = False
-
-            n = list(sites.keys()).index(handle)
-            initialize_window(handle, n)
-
-            if sites[handle].last_text == text:
-                continue
-
-            sites[handle].total_clicks += 1
-            # if sqrt(sites[handle].total) / 20 > random():
-            # print ('Skipped')
-            # continue
-
-            sites[handle].last_text = text
-            click_by_caption(handle, text)
-
+        for hwnd, text in data:
+            # hwnd may became obsolete on any internal step
+            try:
+                process_window(hwnd, text)
+            except Exception as e:
+                print(e)
 
 
 click_check()
-while not sleep(0.1 + random()/2.0):
+while not sleep(0.1 + random() / 2.0):
     # print('cl')
 
     click_check()

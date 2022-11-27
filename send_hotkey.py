@@ -1,5 +1,9 @@
 import ctypes
 import time
+from win32con import *
+from win32api import *
+from time import sleep
+
 
 SendInput = ctypes.windll.user32.SendInput
 
@@ -49,10 +53,10 @@ def PressKeySI(hwnd, hexKeyCode):
     time.sleep(0.2)
 
 
-def ReleaseKeySI(hwnd, hexKeyCode):
+def ReleaseKeySI(hwnd, hex_key_code):
     extra = ctypes.c_ulong(0)
     ii_ = Input_I()
-    ii_.ki = KeyBdInput(hexKeyCode, 0x48, 0x0002, 0, ctypes.pointer(extra))
+    ii_.ki = KeyBdInput(hex_key_code, 0x48, 0x0002, 0, ctypes.pointer(extra))
     x = Input(ctypes.c_ulong(1), ii_)
     ctypes.windll.user32.SendInput(hwnd, ctypes.pointer(x), ctypes.sizeof(x))
     time.sleep(0.2)
@@ -63,16 +67,9 @@ def ReleaseKeySI(hwnd, hexKeyCode):
 # ReleaseKeySI(0x09)  # ~Tab
 # ReleaseKeySI(0x012)  # ~Alt
 
-
-import win32gui
-from win32con import *
-from win32api import *
-from time import sleep
-
-
 # key = ord('M')
 # key = win32con.VK_*
-def PressOrdKey(hwnd, key, ctrl):
+def press_ord_key(hwnd, key, ctrl):
     if ctrl:
         keybd_event(VK_LCONTROL, 0, 0, 0)
         sleep(0.01)
@@ -91,4 +88,3 @@ def PressSysKey(hwnd, key, ctrl):
     PostMessage(hwnd, WM_KEYDOWN, key, 0x0001 | virtual_key << 16)
     sleep(0.01)
     PostMessage(hwnd, WM_KEYUP, key, 0x0001 | virtual_key << 16 | 0xC0 << 24)
-

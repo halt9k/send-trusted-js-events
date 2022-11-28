@@ -5,7 +5,7 @@ from win_enum import enum_processes, enum_process_windows
 from win_utility import *
 import datetime
 
-from winapi_utility import get_width, is_window_normal
+from winapi_utility import get_width, is_window_normal, get_caption
 
 
 @dataclass
@@ -35,12 +35,19 @@ def del_closed_tabs():
 
 
 def is_popup(hwnd):
-    # tricvky: not updated on tabs, must be checked again after activation
+    # tricky: not updated on tabs, must be checked again after activation
+    caption = get_caption(hwnd)
+    if caption.startswith('lichess.org'):
+        return False
+
+    if not is_window_normal(hwnd):
+        return False
+
     wh = get_width(hwnd)
-    return is_window_normal(hwnd) and (wh in range(100, 450))
+    return wh in range(100, 450)
 
 
-def process_window(hwnd, text, rearrange):
+def process_window(hwnd, rearrange):
     if not is_popup(hwnd):
         return rearrange
 
@@ -54,7 +61,7 @@ def process_window(hwnd, text, rearrange):
         n = list(browser_tabs.keys()).index(hwnd)
         setup_window(hwnd, n)
 
-    if browser_tabs[hwnd].last_text == text:
+    if browser_tabs[hwnd].last_text == get_caption(hwnd):
         return rearrange
 
     browser_tabs[hwnd].total_clicks += 1
@@ -62,8 +69,8 @@ def process_window(hwnd, text, rearrange):
     # print ('Skipped')
     # continue
 
-    browser_tabs[hwnd].last_text = text
-    if process_click(hwnd, text):
+    browser_tabs[hwnd].last_text = get_caption(hwnd)
+    if process_click(hwnd):
         browser_tabs[hwnd].last_click_ms = datetime.datetime.now()
 
     return rearrange
@@ -81,15 +88,16 @@ def click_check():
 
         # proc_text = "PId {0:d}{1:s}windows:".format(pid, " (File: [{0:s}]) ".format(name) if name else " ")
         # print(proc_text)
-        for hwnd, text in data:
+        for hwnd, _ in data:
             # hwnd may became obsolete on any internal step
             rearrange = new_window
             new_window = False
             try:
-                rearrange = process_window(hwnd, text, rearrange)
+                rearrange = process_window(hwnd, rearrange)
                 if rearrange:
                     new_window = True
             except Exception as e:
+                browser_tabs.pop(hwnd)
                 print(e)
 
 

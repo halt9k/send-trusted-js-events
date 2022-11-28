@@ -1,8 +1,10 @@
+from time import sleep
+
 import win32api
 import win32con
 import win32gui
 
-from win32gui import GetForegroundWindow, GetWindowRect, ScreenToClient, SetWindowText
+from win32gui import GetForegroundWindow, GetWindowRect, ScreenToClient, SetWindowText, GetWindowText
 
 MOUSEEVENTF_MOVE = 0x0001  # mouse move
 MOUSEEVENTF_ABSOLUTE = 0x8000  # absolute move
@@ -21,6 +23,7 @@ def make_lparam(x, y):
 def activate(hwnd):
     prev_hwnd = GetForegroundWindow()
     win32gui.SetForegroundWindow(hwnd)
+    sleep(0.1)
 
     if GetForegroundWindow() == hwnd:
         return prev_hwnd
@@ -55,3 +58,7 @@ def is_window_normal(handle):
     elif tup[1] == win32con.SW_SHOWNORMAL:
         normal = True
     return normal
+
+
+def get_caption(hwnd):
+    return GetWindowText(hwnd)

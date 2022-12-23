@@ -1,4 +1,3 @@
-from prometheus_client.decorator import getfullargspec
 from win32gui import *
 from send_hotkey import *
 import ctypes

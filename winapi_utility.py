@@ -31,8 +31,10 @@ def activate(hwnd):
         raise Exception('Window activation failed')
 
 
-def get_width(hwnd):
-    return GetWindowRect(hwnd)[2] - GetWindowRect(hwnd)[0]
+def get_dims(hwnd):
+    wh = GetWindowRect(hwnd)[2] - GetWindowRect(hwnd)[0]
+    ht = GetWindowRect(hwnd)[3] - GetWindowRect(hwnd)[1]
+    return wh, ht
 
 
 def click(hwnd, xx, yy):

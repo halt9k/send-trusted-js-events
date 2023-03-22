@@ -5,7 +5,7 @@ from win_enum import enum_processes, enum_process_windows
 from win_utility import *
 import datetime
 
-from winapi_utility import get_width, is_window_normal, get_caption
+from winapi_utility import get_dims, is_window_normal, get_caption
 
 
 @dataclass
@@ -32,19 +32,6 @@ def del_closed_tabs():
 
     for key in pop_keys:
         browser_tabs.pop(key)
-
-
-def is_popup(hwnd):
-    # tricky: not updated on tabs, must be checked again after activation
-    caption = get_caption(hwnd)
-    if caption.startswith('lichess.org'):
-        return False
-
-    if not is_window_normal(hwnd):
-        return False
-
-    wh = get_width(hwnd)
-    return wh in range(100, 450)
 
 
 def process_window(hwnd, rearrange):

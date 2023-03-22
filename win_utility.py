@@ -2,7 +2,7 @@ from win32gui import *
 from send_hotkey import *
 import ctypes
 
-from winapi_utility import activate, click, get_caption, is_window_normal, get_width
+from winapi_utility import activate, click, get_caption, is_window_normal, get_dims
 
 
 def shrink(hwnd, n):
@@ -44,8 +44,8 @@ def is_popup(hwnd):
     if not is_window_normal(hwnd):
         return False
 
-    wh = get_width(hwnd)
-    return wh in range(100, 450)
+    wh, ht = get_dims(hwnd)
+    return wh in range(200, 450) and ht in range(300, 800)
 
 
 def safe_sleep(hwnd, delay):

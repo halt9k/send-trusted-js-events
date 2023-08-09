@@ -301,15 +301,17 @@ function getRandomInt(min, max)
 
 function try_move_new_tab()
 {
-    if ($(window).width() > 400) {
+    if ($(window).width() > 400 && $(window).height() > 400) {
         unsafeWindow.console.log('open_new_tab')
 
         let left = screen.width - 300
-        let windowFeatures = "width=300,height=400,left=" + left + ",top=-1"
+        let windowFeatures = "width=300,height=400,left=" + left + ",top=0"
 
-        let newWindow = window.open(window.location.href, "_blank", windowFeatures)
+        let wnd = window.open(window.location.href, "_blank", windowFeatures)
 
-        window.close()
+        if (wnd){
+            window.close()
+        }
         window.open("https://lichess.org/", "")
     }
 }
@@ -321,16 +323,16 @@ function run_loop()
 
     unsafeWindow.console.log('run_loop')
 	try_mute()
-	for (let i = 0; i < 500; i++)
+	for (let i = -5; i < 500; i++)
 		{
-		setTimeout(MakeRandomMove, Math.pow(i, 1.5) * 500);
+		setTimeout(MakeRandomMove, Math.pow(i, 1.6) * 250);
 		}
 	}
 
 function doc_keyUp(e) {
     switch (e.keyCode) {
-        case 77:
-            //m
+        case 82:
+            //r, not s, not m
             run_loop();
             break;
         default:

@@ -1,11 +1,13 @@
 from dataclasses import dataclass
 from random import random
 
-from win_enum import enum_processes, enum_process_windows
+import win32gui
+
+from get_proc_windows import get_procs_and_captions, enum_process_windows
 from win_utility import *
 import datetime
 
-from winapi_utility import get_dims, is_window_normal, get_caption
+from winapi_helpers import get_dims, is_window_state_normal, get_caption, is_window_state_maxed
 
 
 @dataclass
@@ -63,11 +65,31 @@ def process_window(hwnd, rearrange):
     return rearrange
 
 
+def is_active_tab_maxed() -> bool:
+    handle = GetForegroundWindow()
+    if not handle:
+        return False
+
+    procs = get_procs_and_captions(filter_by_module_name="firefox.exe")
+    handles = [enum_process_windows(x[0]) for x in procs]
+    handles_with_windows = [x for x in handles if x != []]
+    flatten = [x[0] for y in handles_with_windows for x in y]
+
+    if handle not in flatten:
+        return False
+
+    print ('Active tab is maxed: ' + str(is_window_state_maxed(handle)))
+    return is_window_state_maxed(handle)
+
+
 def click_check():
     global browser_tabs, new_window
     del_closed_tabs()
 
-    procs = enum_processes(process_name="firefox.exe")
+    if is_active_tab_maxed():
+        return
+
+    procs = get_procs_and_captions(filter_by_module_name="firefox.exe")
     for pid, name in procs:
         data = enum_process_windows(pid)
         if not data:

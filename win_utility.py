@@ -2,7 +2,7 @@ from win32gui import *
 from send_hotkey import *
 import ctypes
 
-from winapi_utility import activate, click, get_caption, is_window_normal, get_dims
+from winapi_helpers import activate, click, get_caption, is_window_state_normal, get_dims
 
 
 def shrink(hwnd, n):
@@ -41,7 +41,7 @@ def is_popup(hwnd):
     if caption.startswith('lichess.org'):
         return False
 
-    if not is_window_normal(hwnd):
+    if not is_window_state_normal(hwnd):
         return False
 
     wh, ht = get_dims(hwnd)
@@ -49,13 +49,13 @@ def is_popup(hwnd):
 
 
 def safe_sleep(hwnd, delay):
-    is_normal = is_window_normal(hwnd)
+    is_normal = is_window_state_normal(hwnd)
 
     sleep(delay)
 
     if not is_popup(hwnd):
         raise Exception('Window embedded back while sleep')
-    if is_normal != is_window_normal(hwnd):
+    if is_normal != is_window_state_normal(hwnd):
         raise Exception('Window changed pos while sleep')
 
 

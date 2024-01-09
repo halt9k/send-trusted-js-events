@@ -48,7 +48,7 @@ def click(hwnd, xx, yy):
     print('client ' + str(x) + ' ' + str(y) + ' screen ' + str(xx) + ' ' + str(yy))
 
 
-def is_window_normal(handle):
+def is_window_state_normal(handle):
     normal = False
     minimised = False
 
@@ -60,6 +60,11 @@ def is_window_normal(handle):
     elif tup[1] == win32con.SW_SHOWNORMAL:
         normal = True
     return normal
+
+
+def is_window_state_maxed(handle):
+    tup = win32gui.GetWindowPlacement(handle)
+    return tup[1] == win32con.SW_SHOWMAXIMIZED
 
 
 def get_caption(hwnd):

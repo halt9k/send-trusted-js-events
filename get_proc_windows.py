@@ -33,7 +33,7 @@ def enum_process_windows(pid=None):
     return data
 
 
-def _filter_processes(processes, search_name=None):
+def filter_procs(processes, search_name=None):
     if search_name is None:
         return processes
     filtered = []
@@ -57,6 +57,7 @@ def _filter_processes(processes, search_name=None):
     return tuple(filtered)
 
 
-def enum_processes(process_name=None):
+def get_procs_and_captions(filter_by_module_name=None):
     procs = [(pid, None) for pid in wproc.EnumProcesses()]
-    return _filter_processes(procs, search_name=process_name)
+    filtered = filter_procs(procs, search_name=filter_by_module_name)
+    return filtered

@@ -398,14 +398,13 @@ async function run_loop()
 	startTime = new Date()
 
 	try_mute()
-	for (let i = -3; i < 2000; i++)
+	for (let i = -5; i < 2000; i++)
 		{
 		if (!check_opponent(startTime))
 			window.close()
 
 
-		// await sleep(Math.pow(i, 1.6) * 100)
-		await sleep(400)
+		await sleep(Math.pow(i, 1.5) * 50)
 		MakeRandomMove()
 		}
 	}

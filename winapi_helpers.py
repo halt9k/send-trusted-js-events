@@ -20,6 +20,10 @@ def make_lparam(x, y):
     return (y << 16) | (x & 0xFFFF)
 
 
+def if_window_exist(hwnd):
+    return win32gui.IsWindow(hwnd)
+
+
 def activate(hwnd):
     prev_hwnd = GetForegroundWindow()
     win32gui.SetForegroundWindow(hwnd)

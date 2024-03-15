@@ -61,21 +61,18 @@ def safe_sleep(hwnd, delay):
 
 def setup_init(hwnd):
     safe_sleep(hwnd, 0.1)
+    activate(hwnd)
     mute(hwnd)
     safe_sleep(hwnd, 0.1)
+    activate(hwnd)
     run_script(hwnd)
 
 
-def setup_window(hwnd, n):
+def rearrage_window_tile(hwnd, n):
     safe_sleep(hwnd, 0.1)
+    print('shrink, hwnd: ' + str(hwnd))
     if not shrink(hwnd, n):
         return
-
-    print('shrink, hwnd: ' + str(hwnd))
-
-    prev_hwnd = activate(hwnd)
-    setup_init(hwnd)
-    activate(prev_hwnd)
 
 
 def process_click(hwnd):

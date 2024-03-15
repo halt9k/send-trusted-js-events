@@ -28,6 +28,8 @@ var board_squares_weights
 var last_target_pos = {x: 0, y: 0}
 var my_pieces, all_pieces
 var move_info
+var startTime
+const CSS_SEL_OPPONENT_LEFT = ".ruser-top > i:nth-child(1)"
 
 
 function try_mute()
@@ -42,19 +44,26 @@ function try_mute()
 //mousedown { target: cg-board, buttons: 1, clientX: 824, clientY: 289, layerX: 67, layerY: 249 }
 //clickEvent.initMouseEvent('mousedown', false, false, unsafeWindow, 0, 883, 300, 180, 120, false, false, false, false, 1, null);
 
+
 function get_square_size()
 	{
 	let board = document.querySelectorAll("cg-board")[0];
 	return board.clientWidth / 8
 	}
 
-function get_board_pos(elem)
+
+function try_get_board_square(elem)
 	{
 	let tr = unsafeWindow.getComputedStyle(elem).transform;
 	let mat = new WebKitCSSMatrix(tr);
 
 	let sz = get_square_size();
-	return {x: mat.m41 / sz, y: mat.m42 / sz};
+	let pos = {x: mat.m41 / sz, y: mat.m42 / sz}
+
+	if (Number.isInteger(pos.x) && Number.isInteger(pos.y))
+		return pos
+	else
+		return undefined
 	}
 
 function declare_click(elem)
@@ -67,7 +76,10 @@ function declare_click(elem)
 	let x = getRandomInt(rct.left + 5, rct.right - 5) + client_x;
 	let y = getRandomInt(rct.top + 5, rct.bottom - 5) + client_y;
 	document.title = "auto_click " + x + ' ' + y;
-    let pos = get_board_pos(elem);
+    let pos = try_get_board_square(elem);
+	if (!pos)
+		return
+
 	unsafeWindow.console.log('pos: ' + pos.x + ' ' + pos.y)
 	}
 
@@ -88,6 +100,36 @@ function detect_player_side()
 		}
 	UpdateStates()
 	}
+
+
+
+function is_opponent_active(){
+	try{
+        return document.querySelectorAll(CSS_SEL_OPPONENT_LEFT)[0].title != "Left the game"
+    }
+    catch{
+        return true
+    }
+}
+
+
+var last_alive = new Date()
+function check_opponent(start_time){
+	if (is_opponent_active()){
+		last_alive = new Date()
+		return true
+	}
+
+	var cutTime = new Date()
+	var inactiveTime = (cutTime.getTime() - last_alive.getTime()) / 1000
+	var timeFromStart = (cutTime.getTime() - start_time.getTime()) / 1000
+
+	if (timeFromStart < 10 && inactiveTime > 5)
+		return false
+
+	return inactiveTime < 2
+
+}
 
 
 function GetPieceValue(elem)
@@ -122,14 +164,17 @@ function IsEnemy(elem)
 	return (b || w);
 	}
 
+
 function TryDeclareSelect(elem)
 	{
 	declare_click(elem);
 	last_selected_value = GetPieceValue(elem);
-	last_target_pos = get_board_pos(elem)
-	if (board_squares_weights)
+	last_target_pos = try_get_board_square(elem)
+
+	if (board_squares_weights && last_target_pos)
 		{board_squares_weights[last_target_pos.x][last_target_pos.y] *= 0.3}
 	}
+
 
 function TryPrioritySelect()
 	{
@@ -139,7 +184,10 @@ function TryPrioritySelect()
 	let highest_weight = 0;
 	for (const piece of my_pieces)
 		{
-		let pos = get_board_pos(piece);
+		let pos = try_get_board_square(piece);
+		if (!pos)
+			continue
+
 		let dng = board_squares_weights[pos.x][pos.y];
 		highest_weight = Math.max(highest_weight, dng);
 		}
@@ -148,14 +196,17 @@ function TryPrioritySelect()
 	//move_info
 
 	if (highest_weight === 0)
-		{return}
+		return
 
 	for (let I = 0; I < my_pieces.length; I++)
 		{
 		let movedestN = getRandomInt(0, my_pieces.length - 1)
 		let elem = my_pieces[movedestN];
 
-		let pos = get_board_pos(elem);
+		let pos = try_get_board_square(elem);
+		if (!pos)
+			continue
+
 		let dng = board_squares_weights[pos.x][pos.y];
 		let thr = 0.1 + dng / highest_weight;
 
@@ -208,19 +259,25 @@ function UpdateStates()
 	if (side === 1)
         my_pieces = whites;
 
-	for (const pce of all_pieces)
-		{
-		let pos = get_board_pos(pce);
+	unsafeWindow.console.log(board_squares);
+	for (const pce of all_pieces){
+		let pos = try_get_board_square(pce);
+		if (!pos)
+			continue
+
 		// pce.classname
+		unsafeWindow.console.log(pos);
 		board_squares[pos.x][pos.y] = pce;
 		if (IsEnemy(pce))
 			{AddDanger(pos)}
-		}
+	}
+
 	board_squares_weights[last_target_pos.x][last_target_pos.y] += 4
 	}
 
-var could_move = false
 
+
+var could_move = false
 function TryMove(board_squares)
 	{
 	let places = document.getElementsByClassName("move-dest");
@@ -243,7 +300,10 @@ function TryMove(board_squares)
 		{
 		for (const place of places)
 			{
-			let pos = get_board_pos(place);
+			let pos = try_get_board_square(place);
+			if (!pos)
+				continue
+
 			let loc = board_squares[pos.x][pos.y]
 			if (loc && IsEnemy(loc) && Math.random > 0.2)
 				{
@@ -262,6 +322,7 @@ function TryMove(board_squares)
 
 	return true;
 	}
+
 
 function AddDanger(pos)
 	{
@@ -282,6 +343,7 @@ function AddDanger(pos)
 		}
 	}
 
+
 function MakeRandomMove()
 	{
 	move_info = '';
@@ -290,44 +352,64 @@ function MakeRandomMove()
 
 	// unsafeWindow.console.log(board_squares)
 
-	if (TryMove(board_squares)) return;
+	if (TryMove(board_squares))
+		return;
 	TrySelect();
 	}
+
 
 function getRandomInt(min, max)
 	{
 	return Math.floor(Math.random() * (max - min + 1) + min);
 	}
 
-function try_move_new_tab()
-{
-    if ($(window).width() > 400 && $(window).height() > 400) {
-        unsafeWindow.console.log('open_new_tab')
 
-        let left = screen.width - 300
-        let windowFeatures = "width=300,height=400,left=" + left + ",top=0"
+function try_move_new_tab(){
+    if ($(window).width() < 400 || $(window).height() < 400)
+		return
 
-        let wnd = window.open(window.location.href, "_blank", windowFeatures)
+	unsafeWindow.console.log('open_new_tab')
 
-        if (wnd){
-            window.close()
-        }
-        window.open("https://lichess.org/", "")
+	let left = screen.width - 300
+	let windowFeatures = "width=300,height=400,left=" + left + ",top=0"
+
+	let wnd = window.open(window.location.href, "_blank", windowFeatures)
+
+	if (wnd){
+		window.open("https://lichess.org/", "")
+		window.close()
     }
 }
 
 
-function run_loop()
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+
+
+async function run_loop()
 	{
     try_move_new_tab()
 
     unsafeWindow.console.log('run_loop')
+
+	startTime = new Date()
+
 	try_mute()
-	for (let i = -5; i < 500; i++)
+	for (let i = -3; i < 2000; i++)
 		{
-		setTimeout(MakeRandomMove, Math.pow(i, 1.6) * 250);
+		if (!check_opponent(startTime))
+			window.close()
+
+
+		// await sleep(Math.pow(i, 1.6) * 100)
+		await sleep(400)
+		MakeRandomMove()
 		}
 	}
+
 
 function doc_keyUp(e) {
     switch (e.keyCode) {
@@ -339,6 +421,7 @@ function doc_keyUp(e) {
             break;
     }
 }
+
 
 unsafeWindow.console.log('Adding event listener')
 document.addEventListener('keyup', doc_keyUp, false);

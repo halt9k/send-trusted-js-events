@@ -7,7 +7,7 @@ from get_proc_windows import get_procs_and_captions, enum_process_windows
 from win_utility import *
 import datetime
 
-from winapi_helpers import get_dims, is_window_state_normal, get_caption, is_window_state_maxed
+from winapi_helpers import get_dims, is_window_state_normal, get_caption, is_window_state_maxed, if_window_exist
 
 
 @dataclass
@@ -18,6 +18,7 @@ class TabInfo:
     last_click_ms: datetime.datetime = datetime.datetime.now()
     # last_click: (int, int) = (0, 0)
     closed: bool = False
+    initialized: bool = False
 
 
 browser_tabs = {}
@@ -26,32 +27,47 @@ new_window = False
 
 def del_closed_tabs():
     global browser_tabs
+
     pop_keys = []
     for key in browser_tabs.keys():
         if browser_tabs[key].closed:
             pop_keys += [key]
-        browser_tabs[key].closed = True
+
+        browser_tabs[key].closed = not if_window_exist(key)
 
     for key in pop_keys:
         browser_tabs.pop(key)
 
+    return len(pop_keys)
 
-def process_window(hwnd, rearrange):
+
+def process_window(hwnd, force_rearrange):
+    global browser_tabs
+
     if not is_popup(hwnd):
-        return rearrange
+        return
 
     if hwnd not in browser_tabs.keys():
         browser_tabs[hwnd] = TabInfo()
-        rearrange = True
-    browser_tabs[hwnd].closed = False
+        force_rearrange = True
 
-    init_failed = browser_tabs[hwnd].total_clicks == 0 and not rearrange
-    if rearrange or init_failed:
+        browser_tabs[hwnd].closed = False
+        browser_tabs[hwnd].initialized = False
+        browser_tabs[hwnd].added = datetime.time()
+
+    last_capt = browser_tabs[hwnd].last_text
+    if last_capt.startswith("auto_click"):
+        browser_tabs[hwnd].initialized = True
+
+    if not browser_tabs[hwnd].initialized:
+        setup_init(hwnd)
+
+    if force_rearrange or browser_tabs[hwnd].total_clicks == 0:
         n = list(browser_tabs.keys()).index(hwnd)
-        setup_window(hwnd, n)
+        rearrage_window_tile(hwnd, n)
 
     if browser_tabs[hwnd].last_text == get_caption(hwnd):
-        return rearrange
+        return
 
     browser_tabs[hwnd].total_clicks += 1
     # if sqrt(sites[hwnd].total) / 20 > random():
@@ -61,8 +77,6 @@ def process_window(hwnd, rearrange):
     browser_tabs[hwnd].last_text = get_caption(hwnd)
     if process_click(hwnd):
         browser_tabs[hwnd].last_click_ms = datetime.datetime.now()
-
-    return rearrange
 
 
 def is_active_tab_maxed() -> bool:
@@ -84,7 +98,7 @@ def is_active_tab_maxed() -> bool:
 
 def click_check():
     global browser_tabs, new_window
-    del_closed_tabs()
+    count_changed = del_closed_tabs()
 
     if is_active_tab_maxed():
         return
@@ -98,13 +112,8 @@ def click_check():
         # proc_text = "PId {0:d}{1:s}windows:".format(pid, " (File: [{0:s}]) ".format(name) if name else " ")
         # print(proc_text)
         for hwnd, _ in data:
-            # hwnd may became obsolete on any internal step
-            rearrange = new_window
-            new_window = False
             try:
-                rearrange = process_window(hwnd, rearrange)
-                if rearrange:
-                    new_window = True
+                process_window(hwnd, count_changed)
             except Exception as e:
                 browser_tabs.pop(hwnd)
                 print(e)

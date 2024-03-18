@@ -1,1 +1,3 @@
-C:\ProgramData\Anaconda3\envs\temp\python.exe main.py
+call activate dev-3-9-18
+python main.py
+

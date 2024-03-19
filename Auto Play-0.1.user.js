@@ -66,22 +66,26 @@ function try_get_board_square(elem)
 		return undefined
 	}
 
+
 function declare_click(elem)
 	{
 	//GM_openInTab(document.url)
 	let client_x = unsafeWindow.mozInnerScreenX;
 	let client_y = unsafeWindow.mozInnerScreenY;
 
+	debugger
 	let rct = elem.getBoundingClientRect();
 	let x = getRandomInt(rct.left + 5, rct.right - 5) + client_x;
 	let y = getRandomInt(rct.top + 5, rct.bottom - 5) + client_y;
-	document.title = "auto_click " + x + ' ' + y;
+	let scale = unsafeWindow.devicePixelRatio;
+	document.title = "auto_click " + Math.round(x * scale) + ' ' + Math.round(y * scale);
     let pos = try_get_board_square(elem);
 	if (!pos)
 		return
 
 	unsafeWindow.console.log('pos: ' + pos.x + ' ' + pos.y)
 	}
+
 
 function detect_player_side()
 	{
@@ -259,14 +263,14 @@ function UpdateStates()
 	if (side === 1)
         my_pieces = whites;
 
-	unsafeWindow.console.log(board_squares);
+	// unsafeWindow.console.log(board_squares);
 	for (const pce of all_pieces){
 		let pos = try_get_board_square(pce);
 		if (!pos)
 			continue
 
 		// pce.classname
-		unsafeWindow.console.log(pos);
+		// unsafeWindow.console.log(pos);
 		board_squares[pos.x][pos.y] = pce;
 		if (IsEnemy(pce))
 			{AddDanger(pos)}

@@ -275,8 +275,8 @@ function UpdateStates()
 		if (IsEnemy(pce))
 			{AddDanger(pos)}
 	}
-
-	board_squares_weights[last_target_pos.x][last_target_pos.y] += 4
+	if (last_target_pos)
+		board_squares_weights[last_target_pos.x][last_target_pos.y] += 4
 	}
 
 
@@ -402,7 +402,7 @@ async function run_loop()
 	startTime = new Date()
 
 	try_mute()
-	for (let i = -5; i < 2000; i++)
+	for (let i = -5; i < 5000; i++)
 		{
 		if (!check_opponent(startTime))
 			window.close()

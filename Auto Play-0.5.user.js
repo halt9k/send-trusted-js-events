@@ -28,7 +28,6 @@ var board_squares_weights
 var last_target_pos = {x: 0, y: 0}
 var my_pieces, all_pieces
 var move_info
-var startTime
 const CSS_SEL_OPPONENT_LEFT = ".ruser-top > i:nth-child(1)"
 
 
@@ -45,20 +44,35 @@ function try_mute()
 //clickEvent.initMouseEvent('mousedown', false, false, unsafeWindow, 0, 883, 300, 180, 120, false, false, false, false, 1, null);
 
 
+function log_ex(message, loc) {
+	const sourceUrl = `${loc.origin}${loc.pathname}`;
+    const log_exMessage = `%c${message} %c@${sourceUrl}`;
+    console.log(log_exMessage, 'color: blue;', 'color: green;');
+}
+
+
 function get_square_size()
 	{
 	let board = document.querySelectorAll("cg-board")[0];
-	return board.clientWidth / 8
+	return {'x': board.clientWidth / 8, 'y': board.clientHeight / 8}
+	}
+
+
+function try_get_relative_pos(elem)
+	{
+	let tr = unsafeWindow.getComputedStyle(elem).transform;
+	let mat = new WebKitCSSMatrix(tr);
+
+	let xy = {x: mat.m41, y: mat.m42};
+	return xy;
 	}
 
 
 function try_get_board_square(elem)
 	{
-	let tr = unsafeWindow.getComputedStyle(elem).transform;
-	let mat = new WebKitCSSMatrix(tr);
-
+	let pos_px = try_get_relative_pos(elem)
 	let sz = get_square_size();
-	let pos = {x: mat.m41 / sz, y: mat.m42 / sz}
+	let pos = {x: pos_px.x / sz.x, y: pos_px.y / sz.y}
 
 	if (Number.isInteger(pos.x) && Number.isInteger(pos.y))
 		return pos
@@ -67,23 +81,77 @@ function try_get_board_square(elem)
 	}
 
 
-function declare_click(elem)
+function getScreenPosPx(elem, posAtMiddle){
+	// Returns absolute position in pixels (px) relative to screen corner
+	// Works at least on W10 Firefox
+
+	let rect = elem.getBoundingClientRect();
+	let screen_scale = window.devicePixelRatio;
+
+	// relative to page corner
+	// (not from window corner, skips window menu area)
+	let elem_x_px = (posAtMiddle? (rect.left + rect.right) / 2 : rect.x) * screen_scale;
+	let elem_y_px = (posAtMiddle? (rect.bottom + rect.top) / 2 : rect.y) * screen_scale;
+
+	// page corner relative to screen corner
+	let page_x_px = window.mozInnerScreenX * screen_scale;
+	let page_y_px = window.mozInnerScreenY * screen_scale;
+	// cross-platform closet guesss, hacky and bad
+	// expects borders of same width and no page footer at all
+	// let page_x = (window.screenX + (window.outerWidth - window.innerWidth)/2) * screen_scale;
+	// let page_y = (window.screenY + (window.outerHeight - window.innerHeight)) * screen_scale;
+
+	debugger;
+
+	let screen_x = Math.round(page_x_px + elem_x_px);
+	let screen_y = Math.round(page_y_px + elem_y_px);
+
+	return {x:screen_x, y:screen_y}
+}
+
+
+function get_screen_pos_randomized(elem){
+	let xy = getScreenPosPx(elem, true);
+
+	let x = getRandomInt(xy.x - 5, xy.x + 5);
+	let y = getRandomInt(xy.y - 5, xy.y + 5);
+
+	return {x: x, y: y}
+}
+
+
+function get_relative_pos_randomized(elem) {
+	// returns relative position of the element
+	let rct = try_get_relative_pos(elem);
+	let x = getRandomInt(rct.x + 5, rct.x + elem.offsetWidth - 5);
+	let y = getRandomInt(rct.y + 5, rct.y + elem.offsetHeight - 5);
+	return {x:x, y:y}
+}
+
+
+function press_on_board(elem, x, y) {
+	var board = document.querySelector('.cg-wrap > cg-container:nth-child(1) > cg-board:nth-child(1)');
+	var md = new Event('mousedown', {button: 0, clientX: x, clientY: y, layerX: x, layerY: y, target: board});
+	board.dispatchEvent(md)
+	var mu = new Event('mouseup', {button: 0, clientX: x, clientY: y, layerX: x, layerY: y, target: board});
+	board.dispatchEvent(mu)
+}
+
+
+function click_board_element(elem)
 	{
-	//GM_openInTab(document.url)
-	let client_x = unsafeWindow.mozInnerScreenX;
-	let client_y = unsafeWindow.mozInnerScreenY;
+	let pos = get_relative_pos_randomized(elem)
 
-	debugger
-	let rct = elem.getBoundingClientRect();
-	let x = getRandomInt(rct.left + 5, rct.right - 5) + client_x;
-	let y = getRandomInt(rct.top + 5, rct.bottom - 5) + client_y;
-	let scale = unsafeWindow.devicePixelRatio;
-	document.title = "auto_click " + Math.round(x * scale) + ' ' + Math.round(y * scale);
-    let pos = try_get_board_square(elem);
+    pos = try_get_board_square(elem);
 	if (!pos)
-		return
+		return;
 
-	unsafeWindow.console.log('pos: ' + pos.x + ' ' + pos.y)
+	log_ex('click on: ' + pos.x + ' ' + pos.y, location)
+	let xy = get_screen_pos_randomized(elem)
+	document.title = "auto_click " + xy.x + ' ' + xy.y;
+
+	// Unfinished, press still not happening, trusted?
+	// press_on_board(elem, pos.x, pos.y);
 	}
 
 
@@ -92,14 +160,17 @@ function detect_player_side()
 	if (side !== 0)
 		{return}
 
-	unsafeWindow.console.log('side unknown')
+	log_ex('side unknown', location)
 
-	let ghost = document.getElementsByClassName('ghost');
-	if (ghost.length > 0)
+	// let ghost = document.getElementsByClassName('ghost')[0];
+	// if (ghost.length > 0)
+
+	let ghost = document.querySelector(".cg-wrap")
+	if (ghost)
 		{
-		if (ghost[0].className.includes('white'))
+		if (ghost.className.includes('white'))
 			{side = 1}
-		if (ghost[0].className.includes('black'))
+		if (ghost.className.includes('black'))
 			{side = -1}
 		}
 	UpdateStates()
@@ -171,7 +242,7 @@ function IsEnemy(elem)
 
 function TryDeclareSelect(elem)
 	{
-	declare_click(elem);
+	click_board_element(elem);
 	last_selected_value = GetPieceValue(elem);
 	last_target_pos = try_get_board_square(elem)
 
@@ -195,7 +266,7 @@ function TryPrioritySelect()
 		let dng = board_squares_weights[pos.x][pos.y];
 		highest_weight = Math.max(highest_weight, dng);
 		}
-	// unsafeWindow.console.log('gnf max ' + highest_weight)
+	// log_ex('gnf max ' + highest_weight, location)
 	// console.table(board_squares_weights)
 	//move_info
 
@@ -217,7 +288,7 @@ function TryPrioritySelect()
 
 		if (Math.random() < thr)
 			{
-			unsafeWindow.console.log('thr ' + thr)
+			// log_ex('thr ' + thr, location)
 			return elem;
 			}
 		}
@@ -229,7 +300,7 @@ function TrySelect()
 	{
 	if (my_pieces.length > 0)
 		{
-		// unsafeWindow.console.log('clicking_random_piece')
+		// log_ex('clicking_random_piece', location)
 
 		let elem = TryPrioritySelect();
 		if (!elem)
@@ -237,7 +308,7 @@ function TrySelect()
 
 		if (!elem)
 			{
-			// unsafeWindow.console.log('prob selection failed')
+			// log_ex('prob selection failed', location)
 			let movedestN = getRandomInt(0, my_pieces.length - 1)
 			elem = my_pieces[movedestN];
 			}
@@ -249,7 +320,7 @@ function TrySelect()
 
 function UpdateStates()
 	{
-	unsafeWindow.console.log('Updated');
+	// log_ex('Updated', location);
 	board_squares = Array.from(Array(8), () => [null, null, null, null, null, null, null, null]);
 	board_squares_weights = Array.from(Array(8), () => [1, 1, 1, 1, 1, 1, 1, 1]);
 
@@ -263,14 +334,14 @@ function UpdateStates()
 	if (side === 1)
         my_pieces = whites;
 
-	// unsafeWindow.console.log(board_squares);
+	// log_ex(board_squares, location);
 	for (const pce of all_pieces){
 		let pos = try_get_board_square(pce);
 		if (!pos)
 			continue
 
 		// pce.classname
-		// unsafeWindow.console.log(pos);
+		// log_ex(pos, location);
 		board_squares[pos.x][pos.y] = pce;
 		if (IsEnemy(pce))
 			{AddDanger(pos)}
@@ -278,7 +349,6 @@ function UpdateStates()
 	if (last_target_pos)
 		board_squares_weights[last_target_pos.x][last_target_pos.y] += 4
 	}
-
 
 
 var could_move = false
@@ -298,7 +368,7 @@ function TryMove(board_squares)
 	if (!can_move)
 		return false;
 
-	// unsafeWindow.console.log('clicking_random_dest');
+	// log_ex('clicking_random_dest', location);
 	let click_target
 	if (last_selected_value < 5)
 		{
@@ -322,7 +392,7 @@ function TryMove(board_squares)
 		let movedestN = getRandomInt(0, places.length - 1);
 		click_target = places[movedestN];
 		}
-	declare_click(click_target);
+	click_board_element(click_target);
 
 	return true;
 	}
@@ -354,7 +424,7 @@ function MakeRandomMove()
 	detect_player_side();
     UpdateStates();
 
-	// unsafeWindow.console.log(board_squares)
+	// log_ex(board_squares, location)
 
 	if (TryMove(board_squares))
 		return;
@@ -372,7 +442,7 @@ function try_move_new_tab(){
     if ($(window).width() < 400 || $(window).height() < 400)
 		return
 
-	unsafeWindow.console.log('open_new_tab')
+	log_ex('open_new_tab', location)
 
 	let left = screen.width - 300
 	let windowFeatures = "width=300,height=400,left=" + left + ",top=0"
@@ -392,23 +462,23 @@ function sleep(ms) {
 }
 
 
-
+var auto_play_start_time
 async function run_loop()
 	{
     try_move_new_tab()
 
-    unsafeWindow.console.log('run_loop')
+    log_ex('run_loop', location)
 
-	startTime = new Date()
+	auto_play_start_time = new Date()
 
 	try_mute()
 	for (let i = -5; i < 5000; i++)
 		{
-		if (!check_opponent(startTime))
+		if (!check_opponent(auto_play_start_time))
 			window.close()
 
 
-		await sleep(Math.pow(i, 1.5) * 50)
+		await sleep(Math.pow(i, 1.7) * 200 )
 		MakeRandomMove()
 		}
 	}
@@ -426,5 +496,82 @@ function doc_keyUp(e) {
 }
 
 
-unsafeWindow.console.log('Adding event listener')
+log_ex('Adding event listener', location)
 document.addEventListener('keyup', doc_keyUp, false);
+
+
+function is_maximized() {
+    var is_max = screen.availWidth - window.innerWidth === 0;
+	log_ex('is_max: ' + is_max, location);
+	return is_max;
+}
+
+
+function query_selector(selector, debug_msg=true) {
+	var btn = document.querySelector(selector);
+	if (debug_msg && !btn)
+		log_ex("Button not found: " + selector, location)
+	return btn
+}
+
+
+function press_by_selector(selector, event) {
+	var btn = query_selector(selector);
+	if (!btn)
+		return;
+
+	var md_event = new Event('mousedown', {'bubbles': true, 'cancelable': true});
+	btn.dispatchEvent(md_event)
+}
+
+
+function click_btn(selector) {
+	var btn = query_selector(selector);
+	if (!btn)
+		return;
+	btn.click()
+}
+
+
+async function auto_create_new_game() {
+	if (document.URL != "https://lichess.org/")
+		return;
+	if (is_maximized())
+		return;
+
+	await sleep(250)
+
+	// press_by_selector("button.button.button-metal.config_hook", 'mousedown');
+	press_by_selector("button.button:nth-child(1)", 'mousedown');
+	await sleep(400)
+	click_btn("button.color-submits__button:nth-child(2)");
+}
+auto_create_new_game()
+
+
+function is_game_page() {
+	return document.URL.match('https://lichess.org/[a-z].*') == document.URL;
+}
+
+
+var dummy_test_start_time
+async function auto_start_dummy() {
+	if (is_maximized())
+		return;
+	if (!is_game_page)
+		return;
+
+	log_ex("Testing for dummy", location)
+
+
+	dummy_test_start_time = new Date()
+
+	await sleep(250)
+	// press_by_selector("button.button.button-metal.config_hook", 'mousedown');
+	press_by_selector("button.button:nth-child(1)", 'mousedown');
+	await sleep(400)
+	click_btn("button.color-submits__button:nth-child(2)");
+}
+auto_start_dummy()
+
+

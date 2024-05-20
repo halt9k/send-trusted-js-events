@@ -1,8 +1,8 @@
 from win32gui import *
-from send_hotkey import *
+from helpers.winapi.send_hotkey import *
 import ctypes
 
-from winapi_helpers import activate, click, get_caption, is_window_state_normal, get_dims
+from helpers.winapi.interactions import activate, click, get_caption, is_window_state_normal, get_dims
 
 
 def shrink(hwnd, n):

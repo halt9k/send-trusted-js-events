@@ -1,13 +1,12 @@
 from dataclasses import dataclass
 from random import random
 
-import win32gui
-
-from get_proc_windows import get_procs_and_captions, enum_process_windows
-from win_utility import *
+from helpers.winapi.processes import get_procs_and_captions, enum_process_windows
+from helpers.winapi.interactions_2 import *
 import datetime
 
-from winapi_helpers import get_dims, is_window_state_normal, get_caption, is_window_state_maxed, if_window_exist
+from helpers import os  # noqa: F401
+from helpers.winapi.interactions import get_caption, is_window_state_maxed, if_window_exist
 
 
 @dataclass

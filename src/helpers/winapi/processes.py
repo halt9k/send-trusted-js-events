@@ -33,9 +33,12 @@ def enum_process_windows(pid=None):
     return data
 
 
-def filter_procs(processes, search_name=None):
-    if search_name is None:
+def filter_procs(processes, proc_name_filters=None):
+    if proc_name_filters is None:
         return processes
+
+    proc_name_filters = [nm.lower() for nm in proc_name_filters]
+
     filtered = []
     for pid, _ in processes:
         try:
@@ -51,13 +54,13 @@ def filter_procs(processes, search_name=None):
             wapi.CloseHandle(proc)
             continue
         base_name = file_name.split(os.path.sep)[-1]
-        if base_name.lower() == search_name.lower():
+        if base_name.lower() in proc_name_filters:
             filtered.append((pid, file_name))
         wapi.CloseHandle(proc)
     return tuple(filtered)
 
 
-def get_procs_and_captions(filter_by_module_name=None):
+def get_procs_and_captions(proc_name_filters=None):
     procs = [(pid, None) for pid in wproc.EnumProcesses()]
-    filtered = filter_procs(procs, search_name=filter_by_module_name)
+    filtered = filter_procs(procs, proc_name_filters)
     return filtered

@@ -1,12 +1,13 @@
 import ctypes
 import time
+from functools import wraps
+
 from win32con import *
 from win32api import *
 from time import sleep
 
-
+''' Future experiments
 SendInput = ctypes.windll.user32.SendInput
-
 PUL = ctypes.POINTER(ctypes.c_ulong)
 
 
@@ -33,7 +34,7 @@ class MouseInput(ctypes.Structure):
                 ("dwExtraInfo", PUL)]
 
 
-class Input_I(ctypes.Union):
+class InputI(ctypes.Union):
     _fields_ = [("ki", KeyBdInput),
                 ("mi", MouseInput),
                 ("hi", HardwareInput)]
@@ -41,50 +42,59 @@ class Input_I(ctypes.Union):
 
 class Input(ctypes.Structure):
     _fields_ = [("type", ctypes.c_ulong),
-                ("ii", Input_I)]
+                ("ii", InputI)]
 
 
-def PressKeySI(hwnd, hexKeyCode):
+def press_key_si(hwnd, hex_keycode):
+    # press_key_si(0x012)  # Alt
+    # press_key_si(0x09)  # Tab
+
     extra = ctypes.c_ulong(0)
-    ii_ = Input_I()
-    ii_.ki = KeyBdInput(hexKeyCode, 0x48, 0, 0, ctypes.pointer(extra))
+    ii_ = InputI()
+    ii_.ki = KeyBdInput(hex_keycode, 0x48, 0, 0, ctypes.pointer(extra))
     x = Input(ctypes.c_ulong(1), ii_)
     ctypes.windll.user32.SendInput(hwnd, ctypes.pointer(x), ctypes.sizeof(x))
     time.sleep(0.2)
 
 
-def ReleaseKeySI(hwnd, hex_key_code):
+def release_key_si(hwnd, hex_key_code):
+    # release_key_si(0x012)  # ~Alt
+    # release_key_si(0x09)  # ~Tab
+
     extra = ctypes.c_ulong(0)
-    ii_ = Input_I()
+    ii_ = InputI()
     ii_.ki = KeyBdInput(hex_key_code, 0x48, 0x0002, 0, ctypes.pointer(extra))
     x = Input(ctypes.c_ulong(1), ii_)
     ctypes.windll.user32.SendInput(hwnd, ctypes.pointer(x), ctypes.sizeof(x))
     time.sleep(0.2)
 
 
-# PressKeySI(0x012)  # Alt
-# PressKeySI(0x09)  # Tab
-# ReleaseKeySI(0x09)  # ~Tab
-# ReleaseKeySI(0x012)  # ~Alt
-
-# key = ord('M')
-# key = win32con.VK_*
-def press_ord_key(hwnd, key, ctrl):
-    if ctrl:
-        keybd_event(VK_LCONTROL, 0, 0, 0)
-        sleep(0.01)
-
-    PostMessage(hwnd, WM_KEYDOWN, key, 0)
+def press_sys_key(hwnd, key_code):
+    virtual_key = ctypes.windll.user32.MapVirtualKeyA(key_code, 0)
+    PostMessage(hwnd, WM_KEYDOWN, key_code, 0x0001 | virtual_key << 16)
     sleep(0.01)
-    PostMessage(hwnd, WM_KEYUP, key, 0)
-
-    if ctrl:
-        sleep(0.01)
-        keybd_event(VK_LCONTROL, 0, KEYEVENTF_KEYUP, 0)
+    PostMessage(hwnd, WM_KEYUP, key_code, 0x0001 | virtual_key << 16 | 0xC0 << 24)
+'''
 
 
-def PressSysKey(hwnd, key, ctrl):
-    virtual_key = ctypes.windll.user32.MapVirtualKeyA(key, 0)
-    PostMessage(hwnd, WM_KEYDOWN, key, 0x0001 | virtual_key << 16)
-    sleep(0.01)
-    PostMessage(hwnd, WM_KEYUP, key, 0x0001 | virtual_key << 16 | 0xC0 << 24)
+def press_key(hwnd, key_code, delay_sec=0.1):
+    """ key_code: can be ord('M') """
+    # TODO can it send without focus?
+
+    PostMessage(hwnd, WM_KEYDOWN, key_code, 0)
+    sleep(delay_sec)
+    PostMessage(hwnd, WM_KEYUP, key_code, 0)
+    sleep(delay_sec)
+
+
+def press_key_modified(hwnd, key_code, modifier_key_code, delay_sec=0.1):
+    # TODO can it send without focus?
+    """ modifier_key_code: usually will be win32con.VK_*, like VK_LSHIFT, VK_RSHIFT, VK_LCONTROL, VK_RCONTROL """
+
+    # PostMessage may not work in combo
+
+    keybd_event(modifier_key_code, 0, 0, 0)
+    sleep(delay_sec)
+    press_key(hwnd, key_code, delay_sec)
+    keybd_event(modifier_key_code, 0, KEYEVENTF_KEYUP, 0)
+    sleep(delay_sec)

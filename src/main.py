@@ -1,14 +1,15 @@
-from helpers import os  # noqa: F401
+from helpers import os_helpers  # noqa: F401
 from observer.browser_observer import BrowserObserver
 
 
 if __name__ == '__main__':
     print("Please remember not to abuse usage of this automation. \n"
-          "Apply Categorical Imperative to consider moral side: \n"
-          "use is only moral if no harm happens when everyone uses same as yours script \n")
+          "Apply CI test to check if use is fair: \n"
+          "what if everyone uses same as yours script under similar circumstances? \n")
 
-    observer = BrowserObserver(proc_name_filter="firefox.exe",
+    observer = BrowserObserver(proc_filters=["chrome.exe", "firefox.exe"],
+                               caption_filters=["Google"],
                                disable_if_maximized=True,
                                intervals_sec=0.1,
-                               random_interval_extra_sec=0.3)
+                               rnd_intervals_sec=0.3)
     observer.run()

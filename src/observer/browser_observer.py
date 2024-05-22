@@ -3,11 +3,30 @@ from dataclasses import dataclass
 from random import random
 from time import sleep
 
-from win32gui import GetForegroundWindow
-
-from helpers.winapi.interactions import if_window_exist, get_caption, is_window_state_maxed
-from helpers.winapi.interactions_2 import is_popup, setup_init, rearrage_window_tile, process_click
+from helpers.winapi.mouse_events import send_click
+from helpers.winapi.windows import get_caption, if_window_exist, is_active_window_maxed
+from custom_scripts import initial_window_setup, arrage_window, is_arranged
 from helpers.winapi.processes import get_procs_and_captions, enum_process_windows
+
+
+def process_click(hwnd):
+    cords = caption_to_xy(get_caption(hwnd))
+    if cords:
+        send_click(hwnd, cords[0], cords[1])
+    return cords
+
+
+def caption_to_xy(text):
+    if not text.startswith('auto_click '):
+        return None
+
+    cords_txt = text.replace('auto_click ', '')
+    # cords_txt = cords_txt.replace('translate(', '')
+    # cords_txt = cords_txt.replace('px, ', ' ')
+    # TODO
+    cords_txt = cords_txt.replace(' — Mozilla Firefox', '')
+    # cords = [int(s) for s in cords_txt.split() if (s.isdigit() or s == '-')]
+    return [int(float(s)) for s in cords_txt.split()]
 
 
 @dataclass
@@ -24,13 +43,21 @@ class BrowserObserver:
     new_window = False
     cheks_done = 0
 
-    def __init__(self, proc_name_filter, disable_if_maximized, intervals_sec, random_interval_extra_sec):
-        # disable_if_maximized: safety feauture, stops sending anything in case if user have browser window full screen
+    def __init__(self, proc_filters: [], caption_filters: [], disable_if_maximized, intervals_sec, rnd_intervals_sec):
+        """
+        proc_filters: process name must be exactly one of elements
+        caption_filters: window caption (for browsers - tab caption) must include one of elements
+        disable_if_maximized: safety feauture, freezes script while user have active window maximised
+        freq_sec: observer checks intervals
+        rnd_freq_sec: max extra addition to observer checks intervals
+        """
 
+        self.process_name_filters = proc_filters
+        # TODO
+        self.caption_filters = caption_filters
         self.intervals_sec = intervals_sec
-        self.random_intervals_sec = random_interval_extra_sec
+        self.random_intervals_sec = rnd_intervals_sec
         self.disable_if_maximized_window = disable_if_maximized
-        self.proc_name_filter = proc_name_filter
 
     def cleanup_closed_tabs(self):
         # returns amount of removed tabs
@@ -47,24 +74,8 @@ class BrowserObserver:
 
         return len(pop_keys)
 
-    def is_active_tab_maxed(self) -> bool:
-        handle = GetForegroundWindow()
-        if not handle:
-            return False
-
-        procs = get_procs_and_captions(filter_by_module_name=self.proc_name_filter)
-        handles = [enum_process_windows(x[0]) for x in procs]
-        handles_with_windows = [x for x in handles if x != []]
-        flatten = [x[0] for y in handles_with_windows for x in y]
-
-        if handle not in flatten:
-            return False
-
-        print('Active tab is maxed: ' + str(is_window_state_maxed(handle)))
-        return is_window_state_maxed(handle)
-
     def process_window(self, hwnd, force_rearrange):
-        if not is_popup(hwnd):
+        if not is_arranged(hwnd):
             return
 
         if hwnd not in self.known_browser_tabs.keys():
@@ -80,11 +91,11 @@ class BrowserObserver:
             self.known_browser_tabs[hwnd].initialized = True
 
         if not self.known_browser_tabs[hwnd].initialized:
-            setup_init(hwnd)
+            initial_window_setup(hwnd)
 
         if force_rearrange or self.known_browser_tabs[hwnd].total_clicks == 0:
             n = list(self.known_browser_tabs.keys()).index(hwnd)
-            rearrage_window_tile(hwnd, n)
+            arrage_window(hwnd, n)
 
         if self.known_browser_tabs[hwnd].last_text == get_caption(hwnd):
             return
@@ -101,10 +112,11 @@ class BrowserObserver:
     def process_windows(self):
         count_changed = self.cleanup_closed_tabs()
 
-        if self.disable_if_maximized_window and self.is_active_tab_maxed():
+        if self.disable_if_maximized_window and is_active_window_maxed(self.process_name_filters):
+            print('Active window is maxed, observer paused.')
             return
 
-        procs = get_procs_and_captions(filter_by_module_name=self.proc_name_filter)
+        procs = get_procs_and_captions(proc_name_filters=self.process_name_filters)
         for pid, name in procs:
             data = enum_process_windows(pid)
             if not data:

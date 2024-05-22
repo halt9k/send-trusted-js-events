@@ -2,9 +2,14 @@ import ctypes
 import time
 from functools import wraps
 
+import pyautogui
 from win32con import *
 from win32api import *
 from time import sleep
+
+from win32gui import GetForegroundWindow
+
+from helpers.winapi.windows import safe_sleep
 
 ''' Future experiments
 SendInput = ctypes.windll.user32.SendInput
@@ -78,13 +83,14 @@ def press_sys_key(hwnd, key_code):
 
 
 def press_key(hwnd, key_code, delay_sec=0.1):
-    """ key_code: can be ord('M') """
+    """ key_code: can be ord('M'), ord('r'), ... """
     # TODO can it send without focus?
 
-    PostMessage(hwnd, WM_KEYDOWN, key_code, 0)
-    sleep(delay_sec)
-    PostMessage(hwnd, WM_KEYUP, key_code, 0)
-    sleep(delay_sec)
+    with safe_sleep(0.1, hwnd, require_active=True, keep_state=True):
+        PostMessage(hwnd, WM_KEYDOWN, key_code, 0)
+
+    with safe_sleep(0.1, hwnd, require_active=True, keep_state=True):
+        PostMessage(hwnd, WM_KEYUP, key_code, 0)
 
 
 def press_key_modified(hwnd, key_code, modifier_key_code, delay_sec=0.1):
@@ -92,7 +98,6 @@ def press_key_modified(hwnd, key_code, modifier_key_code, delay_sec=0.1):
     """ modifier_key_code: usually will be win32con.VK_*, like VK_LSHIFT, VK_RSHIFT, VK_LCONTROL, VK_RCONTROL """
 
     # PostMessage may not work in combo
-
     keybd_event(modifier_key_code, 0, 0, 0)
     sleep(delay_sec)
     press_key(hwnd, key_code, delay_sec)

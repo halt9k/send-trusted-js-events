@@ -6,7 +6,7 @@ from time import sleep
 from helpers.winapi.mouse_events import send_click
 from helpers.winapi.windows import get_caption, if_window_exist, is_active_window_maxed
 from custom_scripts import initial_window_setup, arrage_window, is_arranged
-from helpers.winapi.processes import get_procs_and_captions, enum_process_windows
+from helpers.winapi.processes import get_process_paths, get_process_windows
 
 
 def process_click(hwnd):
@@ -116,9 +116,9 @@ class BrowserObserver:
             print('Active window is maxed, observer paused.')
             return
 
-        procs = get_procs_and_captions(proc_name_filters=self.process_name_filters)
+        procs = get_process_paths(proc_name_filters=self.process_name_filters)
         for pid, name in procs:
-            data = enum_process_windows(pid)
+            data = get_process_windows(pid)
             if not data:
                 continue
 

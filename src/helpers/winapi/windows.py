@@ -9,7 +9,7 @@ from win32gui import GetWindowText, GetForegroundWindow, GetWindowRect
 from helpers.winapi.hotkey_events import *
 import ctypes
 
-from helpers.winapi.processes import get_procs_and_captions, enum_process_windows
+from helpers.winapi.processes import get_process_paths, get_process_windows
 
 
 def shrink(hwnd, n):
@@ -95,8 +95,8 @@ def is_active_window_maxed(process_name_filters) -> bool:
     if not handle:
         return False
 
-    procs = get_procs_and_captions(proc_name_filters=process_name_filters)
-    handles = [enum_process_windows(x[0]) for x in procs]
+    procs = get_process_paths(proc_name_filters=process_name_filters)
+    handles = [get_process_windows(x[0]) for x in procs]
     handles_with_windows = [x for x in handles if x != []]
     flatten = [x[0] for y in handles_with_windows for x in y]
 

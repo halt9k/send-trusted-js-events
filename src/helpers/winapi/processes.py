@@ -41,21 +41,6 @@ def get_process_windows(pid=None):
     return data
 
 
-@contextlib.contextmanager
-def open_process(pid):
-    try:
-        proc = wapi.OpenProcess(wcon.PROCESS_ALL_ACCESS, 0, pid)
-    except:
-        # print("Process {0:d} couldn't be opened: {1:}".format(pid, traceback.format_exc()))
-        return None
-    assert proc
-
-    try:
-        yield proc
-    finally:
-        wapi.CloseHandle(proc)
-
-
 def try_get_exe_path(pid):
     try:
         proc = wapi.OpenProcess(wcon.PROCESS_ALL_ACCESS, 0, pid)

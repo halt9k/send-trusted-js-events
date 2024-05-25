@@ -2,10 +2,11 @@ import datetime
 from dataclasses import dataclass
 from random import random
 from time import sleep
+from typing import Type
 
 from helpers.winapi.mouse_events import send_click
 from helpers.winapi.windows import get_caption, if_window_exist, is_active_window_maxed
-from custom_scripts import initial_window_setup, arrage_window, is_arranged
+from custom_script import CustomScriptAbstract
 from helpers.winapi.processes import get_process_paths, get_process_windows
 
 
@@ -13,7 +14,9 @@ def process_click(hwnd):
     cords = caption_to_xy(get_caption(hwnd))
     if cords:
         send_click(hwnd, cords[0], cords[1])
-    return cords
+        return True
+    else:
+        return False
 
 
 def caption_to_xy(text):
@@ -29,6 +32,14 @@ def caption_to_xy(text):
     return [int(float(s)) for s in cords_txt.split()]
 
 
+class TabInfo:
+    last_text: str = ''
+    total_clicks: int = 0
+    last_click_ms: datetime.datetime = datetime.datetime.now()
+    closed: bool = False
+    initialized: bool = False
+
+
 @dataclass
 class TabInfo:
     last_text: str = ''
@@ -39,11 +50,10 @@ class TabInfo:
 
 
 class BrowserObserver:
-    known_browser_tabs = {}
-    new_window = False
-    cheks_done = 0
+    known_windows = {}
+    observations_count = 0
 
-    def __init__(self, proc_filters: [], caption_filters: [], disable_if_maximized, intervals_sec, rnd_intervals_sec):
+    def __init__(self, user_script: Type[CustomScriptAbstract]):
         """
         proc_filters: process name must be exactly one of elements
         caption_filters: window caption (for browsers - tab caption) must include one of elements
@@ -51,26 +61,20 @@ class BrowserObserver:
         freq_sec: observer checks intervals
         rnd_freq_sec: max extra addition to observer checks intervals
         """
-
-        self.process_name_filters = proc_filters
-        # TODO
-        self.caption_filters = caption_filters
-        self.intervals_sec = intervals_sec
-        self.random_intervals_sec = rnd_intervals_sec
-        self.disable_if_maximized_window = disable_if_maximized
+        self.user_script = user_script
 
     def cleanup_closed_tabs(self):
         # returns amount of removed tabs
 
         pop_keys = []
-        for key in self.known_browser_tabs.keys():
-            if self.known_browser_tabs[key].closed:
+        for key in self.known_windows.keys():
+            if self.known_windows[key].closed:
                 pop_keys += [key]
 
-            self.known_browser_tabs[key].closed = not if_window_exist(key)
+            self.known_windows[key].closed = not if_window_exist(key)
 
         for key in pop_keys:
-            self.known_browser_tabs.pop(key)
+            self.known_windows.pop(key)
 
         return len(pop_keys)
 
@@ -78,36 +82,36 @@ class BrowserObserver:
         if not is_arranged(hwnd):
             return
 
-        if hwnd not in self.known_browser_tabs.keys():
-            self.known_browser_tabs[hwnd] = TabInfo()
+        if hwnd not in self.known_windows.keys():
+            self.known_windows[hwnd] = TabInfo()
             force_rearrange = True
 
-            self.known_browser_tabs[hwnd].closed = False
-            self.known_browser_tabs[hwnd].initialized = False
-            self.known_browser_tabs[hwnd].added = datetime.time()
+            self.known_windows[hwnd].closed = False
+            self.known_windows[hwnd].initialized = False
+            self.known_windows[hwnd].added = datetime.time()
 
-        last_capt = self.known_browser_tabs[hwnd].last_text
+        last_capt = self.known_windows[hwnd].last_text
         if last_capt.startswith("auto_click"):
-            self.known_browser_tabs[hwnd].initialized = True
+            self.known_windows[hwnd].initialized = True
 
-        if not self.known_browser_tabs[hwnd].initialized:
+        if not self.known_windows[hwnd].initialized:
             initial_window_setup(hwnd)
 
-        if force_rearrange or self.known_browser_tabs[hwnd].total_clicks == 0:
-            n = list(self.known_browser_tabs.keys()).index(hwnd)
+        if force_rearrange or self.known_windows[hwnd].total_clicks == 0:
+            n = list(self.known_windows.keys()).index(hwnd)
             arrage_window(hwnd, n)
 
-        if self.known_browser_tabs[hwnd].last_text == get_caption(hwnd):
+        if self.known_windows[hwnd].last_text == get_caption(hwnd):
             return
 
-        self.known_browser_tabs[hwnd].total_clicks += 1
+        self.known_windows[hwnd].total_clicks += 1
         # if sqrt(sites[hwnd].total) / 20 > random():
         # print ('Skipped')
         # continue
 
-        self.known_browser_tabs[hwnd].last_text = get_caption(hwnd)
+        self.known_windows[hwnd].last_text = get_caption(hwnd)
         if process_click(hwnd):
-            self.known_browser_tabs[hwnd].last_click_ms = datetime.datetime.now()
+            self.known_windows[hwnd].last_click_ms = datetime.datetime.now()
 
     def process_windows(self):
         count_changed = self.cleanup_closed_tabs()
@@ -128,11 +132,12 @@ class BrowserObserver:
                 try:
                     self.process_window(hwnd, count_changed)
                 except Exception as e:
-                    self.known_browser_tabs.pop(hwnd)
+                    self.known_windows.pop(hwnd)
                     print(e)
 
     def run(self):
-        self.process_windows()
-        while not sleep(self.intervals_sec + random() * self.random_intervals_sec):
-            self.cheks_done += 1
-            self.process_windows()
+        while True:
+            skip_next = self.user_script.on_loop_sleep()
+            if not skip_next:
+                self.process_windows()
+            self.observations_count += 1

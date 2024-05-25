@@ -6,6 +6,7 @@ from time import sleep
 import win32con
 import win32gui
 from winxpgui import IsWindow
+import pyautogui
 
 from helpers.winapi.processes import get_process_paths, get_process_windows
 
@@ -48,10 +49,13 @@ def shrink_and_arrange(hwnd, n, shrinked_width, shrinked_height):
     return True
 
 
-
 @contextmanager
 def safe_sleep(delay, hwnd, require_active=False, keep_state=False):
     # reminder: during sleep windows can be closed, moved, trayed, switched
+
+    if require_active and win32gui.GetForegroundWindow() != hwnd:
+        raise Exception(f'Window inactive at sleep start: {hwnd}')
+
     state = get_window_state(hwnd) if keep_state else None
     sleep(delay)
 
@@ -80,14 +84,15 @@ def if_window_exist(hwnd):
     return IsWindow(hwnd)
 
 
-def activate(hwnd, post_delay=0.1):
+def activate(hwnd, post_delay=0.15):
     prev_hwnd = win32gui.GetForegroundWindow()
+    pyautogui.press("alt")
     win32gui.SetForegroundWindow(hwnd)
 
     sleep(post_delay)
 
     if win32gui.GetForegroundWindow() == hwnd:
-        return prev_hwnd
+        return True
     else:
         raise Exception(f'Window activation failed: {hwnd}')
 

@@ -57,16 +57,15 @@ def try_get_exe_path(pid):
         wapi.CloseHandle(proc)
 
 
-def get_process_paths(proc_name_filters=None):
+def get_process_paths(proc_filter_func=None):
     """ proc_name_filters: case insensitive """
 
     procs = wproc.EnumProcesses()
     pid_paths = [(pid, try_get_exe_path(pid)) for pid in procs]
     filtered = [(pid, Path(path).name) for pid, path in pid_paths if path]
 
-    if proc_name_filters:
-        pn_filters = [nm.lower() for nm in proc_name_filters]
-        filtered = [(pid, bname) for pid, bname in filtered if bname.lower() in pn_filters]
+    if proc_filter_func:
+        filtered = [(pid, bname) for pid, bname in filtered if proc_filter_func(bname)]
 
     return filtered
 

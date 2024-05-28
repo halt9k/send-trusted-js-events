@@ -86,10 +86,10 @@ def press_key(hwnd, key_code, delay_sec=0.1):
     """ key_code: can be ord('M'), ord('r'), ... """
     # TODO can it send without focus?
 
-    with safe_sleep(0.1, hwnd, require_active=True, keep_state=True):
+    with safe_sleep(delay_sec, hwnd, require_active=True, keep_state=True):
         PostMessage(hwnd, WM_KEYDOWN, key_code, 0)
 
-    with safe_sleep(0.1, hwnd, require_active=True, keep_state=True):
+    with safe_sleep(delay_sec, hwnd, require_active=True, keep_state=True):
         PostMessage(hwnd, WM_KEYUP, key_code, 0)
 
 

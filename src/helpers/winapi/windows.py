@@ -46,6 +46,7 @@ def shrink_and_arrange(hwnd, n, shrinked_width, shrinked_height):
         return False
 
     win32gui.MoveWindow(hwnd, x, y, w, h, True)
+    print(f'Hwnd shrink requested: {hwnd}')
     return True
 
 
@@ -57,6 +58,8 @@ def safe_sleep(delay, hwnd, require_active=False, keep_state=False):
         raise Exception(f'Window inactive at sleep start: {hwnd}')
 
     state = get_window_state(hwnd) if keep_state else None
+
+    print(f"Sleep {delay}")
     sleep(delay)
 
     if not if_window_exist(hwnd):
@@ -70,13 +73,30 @@ def safe_sleep(delay, hwnd, require_active=False, keep_state=False):
     yield
 
 
+@contextmanager
+def activate(hwnd, post_delay=0.15):
+    prev_hwnd = win32gui.GetForegroundWindow()
+
+    if prev_hwnd != hwnd:
+        pyautogui.press("alt")
+        win32gui.SetForegroundWindow(hwnd)
+
+        sleep(post_delay)
+
+    if win32gui.GetForegroundWindow() == hwnd:
+        yield
+        win32gui.SetForegroundWindow(prev_hwnd)
+    else:
+        raise Exception(f'Window activation failed: {hwnd}')
+
+
 def get_window_state(hwnd) -> WindowState:
     place = win32gui.GetWindowPlacement(hwnd)
     state = WindowState(place[1])
     return state
 
 
-def get_caption(hwnd):
+def get_title(hwnd):
     return win32gui.GetWindowText(hwnd)
 
 
@@ -84,25 +104,12 @@ def if_window_exist(hwnd):
     return IsWindow(hwnd)
 
 
-def activate(hwnd, post_delay=0.15):
-    prev_hwnd = win32gui.GetForegroundWindow()
-    pyautogui.press("alt")
-    win32gui.SetForegroundWindow(hwnd)
-
-    sleep(post_delay)
-
-    if win32gui.GetForegroundWindow() == hwnd:
-        return True
-    else:
-        raise Exception(f'Window activation failed: {hwnd}')
-
-
-def is_active_window_maxed(process_name_filters) -> bool:
+def is_active_window_maxed(proc_filter_func) -> bool:
     hwnd = win32gui.GetForegroundWindow()
     if not hwnd:
         return False
 
-    procs = get_process_paths(proc_name_filters=process_name_filters)
+    procs = get_process_paths(proc_filter_func)
     handles = [get_process_windows(x[0]) for x in procs]
     handles_with_windows = [x for x in handles if x != []]
     flatten = [x[0] for y in handles_with_windows for x in y]

@@ -29,6 +29,7 @@ var last_target_pos = {x: 0, y: 0}
 var my_pieces, all_pieces
 var move_info
 const CSS_SEL_OPPONENT_LEFT = ".ruser-top > i:nth-child(1)"
+const REQ_CLICK = 'REQ CLICK %X %Y'
 
 
 function try_mute()
@@ -101,8 +102,6 @@ function getScreenPosPx(elem, posAtMiddle){
 	// let page_x = (window.screenX + (window.outerWidth - window.innerWidth)/2) * screen_scale;
 	// let page_y = (window.screenY + (window.outerHeight - window.innerHeight)) * screen_scale;
 
-	debugger;
-
 	let screen_x = Math.round(page_x_px + elem_x_px);
 	let screen_y = Math.round(page_y_px + elem_y_px);
 
@@ -148,7 +147,7 @@ function click_board_element(elem)
 
 	log_ex('click on: ' + pos.x + ' ' + pos.y, location)
 	let xy = get_screen_pos_randomized(elem)
-	document.title = "auto_click " + xy.x + ' ' + xy.y;
+	document.title = REQ_CLICK.replace('%X', xy.x).replace('%Y', xy.y);
 
 	// Unfinished, press still not happening, trusted?
 	// press_on_board(elem, pos.x, pos.y);
@@ -509,8 +508,9 @@ function is_maximized() {
 
 function query_selector(selector, debug_msg=true) {
 	var btn = document.querySelector(selector);
-	if (debug_msg && !btn)
+	if (debug_msg && !btn) {
 		log_ex("Button not found: " + selector, location)
+	}
 	return btn
 }
 
@@ -549,8 +549,10 @@ async function auto_create_new_game() {
 auto_create_new_game()
 
 
-function is_game_page() {
-	return document.URL.match('https://lichess.org/[a-z].*') == document.URL;
+function is_windowed_game_page() {
+	let windowed = window.outerWidth > 400
+	let game_url = document.URL.match('https://lichess.org/[a-z].*') == document.URL
+	return game_url && windowed;
 }
 
 
@@ -558,7 +560,7 @@ var dummy_test_start_time
 async function auto_start_dummy() {
 	if (is_maximized())
 		return;
-	if (!is_game_page)
+	if (!is_windowed_game_page)
 		return;
 
 	log_ex("Testing for dummy", location)
@@ -568,9 +570,9 @@ async function auto_start_dummy() {
 
 	await sleep(250)
 	// press_by_selector("button.button.button-metal.config_hook", 'mousedown');
-	press_by_selector("button.button:nth-child(1)", 'mousedown');
+	// press_by_selector("button.button:nth-child(1)", 'mousedown');
 	await sleep(400)
-	click_btn("button.color-submits__button:nth-child(2)");
+	// click_btn("button.color-submits__button:nth-child(2)");
 }
 auto_start_dummy()
 

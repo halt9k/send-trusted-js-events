@@ -5,10 +5,13 @@ from time import sleep
 
 import win32con
 import win32gui
-from winxpgui import IsWindow
 import pyautogui
 
-from helpers.winapi.processes import get_process_paths, get_process_windows
+from helpers.winapi.processes import get_module_paths, get_process_windows
+
+
+class MissingWindowFocusException(Exception):
+    pass
 
 
 class WindowState(Enum):
@@ -25,8 +28,10 @@ def get_dims(hwnd):
 
 
 def shrink_and_arrange(hwnd, n, shrinked_width, shrinked_height):
-    """ resizes window (browser tab)
-    and arranges them in two rows starting from right bottom corner n = 1 """
+    """
+    Routine good for simultaneous testing of multiple tabs. Resizes window (browser tab)
+    and arranges them in two rows starting from right bottom corner n = 1
+    """
 
     user32 = ctypes.windll.user32
     screensize = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
@@ -45,36 +50,36 @@ def shrink_and_arrange(hwnd, n, shrinked_width, shrinked_height):
     if alreday_moved:
         return False
 
+    print(f'Trying to rearrange hwnd: {hwnd}')
     win32gui.MoveWindow(hwnd, x, y, w, h, True)
-    print(f'Hwnd shrink requested: {hwnd}')
     return True
 
 
 @contextmanager
-def safe_sleep(delay, hwnd, require_active=False, keep_state=False):
+def unsafe_sleep(delay, hwnd, require_active=False, keep_state=False):
     # reminder: during sleep windows can be closed, moved, trayed, switched
 
     if require_active and win32gui.GetForegroundWindow() != hwnd:
-        raise Exception(f'Window inactive at sleep start: {hwnd}')
+        raise MissingWindowFocusException(f'Window inactive at sleep start: {hwnd}')
 
     state = get_window_state(hwnd) if keep_state else None
 
     print(f"Sleep {delay}")
     sleep(delay)
 
-    if not if_window_exist(hwnd):
+    if is_window_closed(hwnd):
         raise Exception(f'Window closed while sleep: {hwnd}')
 
     if keep_state and state != get_window_state(hwnd):
         raise Exception(f'Window changed state while sleep: {hwnd}')
 
     if require_active and win32gui.GetForegroundWindow() != hwnd:
-        raise Exception(f'Window went inactive while sleep: {hwnd}')
+        raise MissingWindowFocusException(f'Window went inactive while sleep: {hwnd}')
     yield
 
 
 @contextmanager
-def activate(hwnd, post_delay=0.15):
+def switch_focus_window(hwnd, post_delay=0.15):
     prev_hwnd = win32gui.GetForegroundWindow()
 
     if prev_hwnd != hwnd:
@@ -87,7 +92,7 @@ def activate(hwnd, post_delay=0.15):
         yield
         win32gui.SetForegroundWindow(prev_hwnd)
     else:
-        raise Exception(f'Window activation failed: {hwnd}')
+        raise MissingWindowFocusException(f'Window activation failed: {hwnd}')
 
 
 def get_window_state(hwnd) -> WindowState:
@@ -100,8 +105,12 @@ def get_title(hwnd):
     return win32gui.GetWindowText(hwnd)
 
 
-def if_window_exist(hwnd):
-    return IsWindow(hwnd)
+def set_title(hwnd, title):
+    win32gui.SetWindowText(hwnd, title)
+
+
+def is_window_closed(hwnd):
+    return not win32gui.IsWindow(hwnd)
 
 
 def is_active_window_maxed(proc_filter_func) -> bool:
@@ -109,7 +118,7 @@ def is_active_window_maxed(proc_filter_func) -> bool:
     if not hwnd:
         return False
 
-    procs = get_process_paths(proc_filter_func)
+    procs = get_module_paths(proc_filter_func)
     handles = [get_process_windows(x[0]) for x in procs]
     handles_with_windows = [x for x in handles if x != []]
     flatten = [x[0] for y in handles_with_windows for x in y]
@@ -117,6 +126,4 @@ def is_active_window_maxed(proc_filter_func) -> bool:
     if hwnd not in flatten:
         return False
 
-    # TODO exception can occur on any winapi call due to invalidated hanlde;
-    # how this is solved?
     return get_window_state(hwnd) == WindowState.MAX

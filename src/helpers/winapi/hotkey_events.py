@@ -1,15 +1,8 @@
-import ctypes
-import time
-from functools import wraps
-
-import pyautogui
 from win32con import *
 from win32api import *
 from time import sleep
 
-from win32gui import GetForegroundWindow
-
-from helpers.winapi.windows import safe_sleep
+from helpers.winapi.windows import unsafe_sleep
 
 ''' Future experiments
 SendInput = ctypes.windll.user32.SendInput
@@ -84,12 +77,12 @@ def press_sys_key(hwnd, key_code):
 
 def press_key(hwnd, key_code, delay_sec=0.1):
     """ key_code: can be ord('M'), ord('r'), ... """
-    # TODO can it send without focus?
 
-    with safe_sleep(delay_sec, hwnd, require_active=True, keep_state=True):
+    with unsafe_sleep(delay_sec, hwnd, require_active=True, keep_state=True):
         PostMessage(hwnd, WM_KEYDOWN, key_code, 0)
 
-    with safe_sleep(delay_sec, hwnd, require_active=True, keep_state=True):
+    # TODO remove?
+    with unsafe_sleep(delay_sec, hwnd, require_active=True, keep_state=True):
         PostMessage(hwnd, WM_KEYUP, key_code, 0)
 
 

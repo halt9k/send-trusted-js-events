@@ -17,6 +17,7 @@ def make_lparam(x, y):
 
 
 def send_click(hwnd, x, y):
+    # TODO fix to relative?
     """ Sends a click to hwnd, but using absolute position """
 
     # l, t, r, b = win32gui.GetClientRect(hwnd)
@@ -25,7 +26,10 @@ def send_click(hwnd, x, y):
 
     win32api.PostMessage(hwnd, WM_LBUTTONDOWN, 1, make_lparam(cx, cy))
     win32api.PostMessage(hwnd, WM_LBUTTONUP, 0, make_lparam(cx, cy))
+
+    # TODO any command done title
     SetWindowText(hwnd, 'click_done')
+
     print(f'Client x: {cx} y: {cy}  Screen x: {x} y: {y}')
 
 

@@ -8,7 +8,8 @@ from win32con import VK_LCONTROL
 from code_tools.virtual_methods import override
 from helpers.winapi.hotkey_events import press_key, press_key_modified
 from helpers.winapi.windows import shrink_and_arrange, get_window_state, get_title, activate, get_dims, \
-    safe_sleep, WindowState, is_active_window_maxed
+    unsafe_sleep, WindowState, is_active_window_maxed
+from observer.userscript_bridge import try_get_caption_request
 from observer.custom_script_abstract import CustomScriptAbstract
 
 ARRANGE_WIDTH, ARRANGE_HEIGHT = 330, 510
@@ -19,6 +20,9 @@ class UserObserverScript(CustomScriptAbstract):
     """
     proc_filters: list of exact allowed process module (exe) file names or None to disable
     caption_filters: list of text window titles must include or None to disable
+    disable_if_maximized: safety feauture, freezes script while user have active window maximised
+    intervals_sec: sleep intervals
+    random_intervals_sec: extra addition to sleep intervals
     """
     disable_if_maximized: bool = True
     intervals_sec: float = 0.1
@@ -30,7 +34,7 @@ class UserObserverScript(CustomScriptAbstract):
 
     @staticmethod
     def mute_tab(hwnd):
-        with safe_sleep(0.1, hwnd, require_active=True):
+        with unsafe_sleep(0.1, hwnd, require_active=True):
             press_key_modified(hwnd, key_code=ord('M'), modifier_key_code=VK_LCONTROL)
 
     @staticmethod
@@ -38,7 +42,6 @@ class UserObserverScript(CustomScriptAbstract):
         w, h = get_dims(hwnd)
         return abs(w - ARRANGE_WIDTH) < 10 and abs(h - ARRANGE_HEIGHT) < 10
 
-    # TODO what if fails, repeat?
     @override
     def on_initial_window_setup(self, hwnd) -> bool:
         if not self.is_shrinked(hwnd):
@@ -52,8 +55,8 @@ class UserObserverScript(CustomScriptAbstract):
                 press_key(hwnd, ord('R'))
                 self.keys_passed[hwnd] = True
 
-        caption = get_title(hwnd)
-        if caption.startswith("auto_click"):
+        req = try_get_caption_request(hwnd)
+        if req:
             return True
 
         return False
@@ -69,7 +72,7 @@ class UserObserverScript(CustomScriptAbstract):
             return True
 
         caption = get_title(hwnd)
-        if 'lichess.org' in caption:
+        if caption in self.caption_filters:
             self.known_windows[hwnd] = True
             return True
         return False

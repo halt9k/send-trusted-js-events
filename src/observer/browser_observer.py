@@ -1,45 +1,11 @@
 import datetime
 from dataclasses import dataclass
-from random import random
-from time import sleep
 from typing import Type
 
-from helpers.winapi.mouse_events import send_click
-from helpers.winapi.windows import get_title, if_window_exist, is_active_window_maxed
+from helpers.winapi.windows import get_title, if_window_exist
+from observer.userscript_bridge import process_caption, try_get_caption_request
 from src.observer.custom_script_abstract import CustomScriptAbstract
-from helpers.winapi.processes import get_process_paths, get_process_windows
-
-
-def get_caption_message_request(hwnd):
-    title = get_title(hwnd)
-    if not title.startswith('auto_click '):
-        return None
-
-    title = title.replace('auto_click ', '')
-    msg = title.replace(' — Mozilla Firefox', '')
-
-    return msg
-
-
-def mouse_req_to_xy(req):
-    # cords_txt = cords_txt.replace('translate(', '')
-    # cords_txt = cords_txt.replace('px, ', ' ')
-    # cords = [int(s) for s in cords_txt.split() if (s.isdigit() or s == '-')]
-    return [int(float(s)) for s in req.split()]
-
-
-def process_click(hwnd):
-    msg = get_caption_message_request(hwnd)
-    if not msg:
-        return None
-
-    # TODO other reqs
-    cords = mouse_req_to_xy(msg)
-    if cords:
-        send_click(hwnd, cords[0], cords[1])
-        return True
-    else:
-        return False
+from helpers.winapi.processes import get_module_paths, get_process_windows
 
 
 @dataclass
@@ -55,16 +21,12 @@ class BrowserObserver:
     known_windows = {}
     observations_count = 0
 
-    def __init__(self, user_script: Type[CustomScriptAbstract], debug_messages = False):
+    def __init__(self, user_script: Type[CustomScriptAbstract], expected_exceptions: [Type[Exception]]):
         """
-        proc_filters: process name must be exactly one of elements
-        caption_filters: window caption (for browsers - tab caption) must include one of elements
-        disable_if_maximized: safety feauture, freezes script while user have active window maximised
-        freq_sec: observer checks intervals
-        rnd_freq_sec: max extra addition to observer checks intervals
+        catch_exceptions: all Winapi calls may cause exceptions (Window closed), by default they are caught
         """
         self.user_script = user_script
-        self.debug_messages = debug_messages
+        self.expected_exceptions = expected_exceptions
 
     def cleanup_closed_tabs(self):
         # returns amount of removed tabs
@@ -81,15 +43,11 @@ class BrowserObserver:
 
         return len(pop_keys)
 
-    def provide_caption_commands(self, hwnd):
-        # if sqrt(sites[hwnd].total) / 20 > random():
-        # print ('Skipped')
-        # continue
-
+    def deliver_caption_requests(self, hwnd):
         if self.known_windows[hwnd].last_text == get_title(hwnd):
             return
 
-        if process_click(hwnd):
+        if process_caption(hwnd):
             self.known_windows[hwnd].last_message_ms = datetime.datetime.now()
             self.known_windows[hwnd].total_messages_send += 1
             self.known_windows[hwnd].last_text = get_title(hwnd)
@@ -109,7 +67,7 @@ class BrowserObserver:
 
         return self.known_windows[hwnd].initialized
 
-    def process_window(self, hwnd):
+    def process_hwnd(self, hwnd):
         if not self.initialize_window(hwnd):
             return
 
@@ -117,39 +75,43 @@ class BrowserObserver:
         n = initialized_windows.index(hwnd)
         self.user_script.on_custom_processing(hwnd, n, self.known_windows[hwnd].total_messages_send)
 
-        self.provide_caption_commands(hwnd)
+        self.deliver_caption_requests(hwnd)
 
-    def process_windows(self):
+    def process_hwnd_safely(self, hwnd):
+        # TODO not transparent enough
+        req = try_get_caption_request(hwnd)
+        if not req and not self.user_script.on_hwnd_filter(hwnd):
+            return
+
+        try:
+            self.process_hwnd(hwnd)
+        except Exception as e:
+            if type(e) is self.expected_exceptions:
+                self.known_windows.pop(hwnd)
+                print(f"Expected exception during hwnd processing {hwnd}, hwnd will be reinitialised. ")
+                print(e)
+            else:
+                raise
+
+    def process_running_modules(self):
         count_changed = self.cleanup_closed_tabs()
 
-        procs = get_process_paths(self.user_script.on_process_module_filter)
-        for pid, name in procs:
-            data = get_process_windows(pid)
-            if not data:
+        proc_paths = get_module_paths(self.user_script.on_process_module_filter)
+        for pid, name in proc_paths:
+            proc_hwnds = get_process_windows(pid)
+            if not proc_hwnds:
                 continue
 
             # proc_text = "PId {0:d}{1:s}windows:".format(pid, " (File: [{0:s}]) ".format(name) if name else " ")
             # print(proc_text)
-            for hwnd, _ in data:
-                # TODO not transparent enough
-                req = get_caption_message_request(hwnd)
-                if not req and not self.user_script.on_hwnd_filter(hwnd):
-                    continue
-
-                try:
-                    self.process_window(hwnd)
-                except Exception as e:
-                    if self.debug_messages:
-                        raise
-                    else:
-                        self.known_windows.pop(hwnd)
-                        print(e)
+            for hwnd, _ in proc_hwnds:
+                self.process_hwnd_safely(hwnd)
 
     def run(self):
         while True:
             skip_next = self.user_script.on_loop_sleep()
             if not skip_next:
-                self.process_windows()
+                self.process_running_modules()
             else:
                 print('Userscrript requested skip, observer is idle.')
             self.observations_count += 1

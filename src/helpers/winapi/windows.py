@@ -5,7 +5,6 @@ from time import sleep
 
 import win32con
 import win32gui
-from winxpgui import IsWindow
 import pyautogui
 
 from helpers.winapi.processes import get_module_paths, get_process_windows
@@ -104,8 +103,12 @@ def get_title(hwnd):
     return win32gui.GetWindowText(hwnd)
 
 
+def set_title(hwnd, title):
+    win32gui.SetWindowText(hwnd, title)
+
+
 def if_window_exist(hwnd):
-    return IsWindow(hwnd)
+    return win32gui.IsWindow(hwnd)
 
 
 def is_active_window_maxed(proc_filter_func) -> bool:

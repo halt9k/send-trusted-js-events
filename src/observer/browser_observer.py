@@ -2,6 +2,8 @@ import datetime
 from dataclasses import dataclass
 from typing import Type
 
+import pywintypes
+
 from helpers.winapi.windows import get_title, if_window_exist
 from observer.userscript_bridge import process_caption, try_get_caption_request
 from src.observer.custom_script_abstract import CustomScriptAbstract
@@ -21,12 +23,17 @@ class BrowserObserver:
     known_windows = {}
     observations_count = 0
 
-    def __init__(self, user_script: Type[CustomScriptAbstract], expected_exceptions: [Type[Exception]]):
+    def __init__(self, user_script: CustomScriptAbstract,
+                 expected_exceptions: [Type[Exception]],
+                 expected_pywin_exceptions: [int]):
         """
         catch_exceptions: all Winapi calls may cause exceptions (Window closed), by default they are caught
+        expected_exceptions: which to surpress
+        expected_pywin_exceptions: which pywintype.error codes to surpress
         """
         self.user_script = user_script
         self.expected_exceptions = expected_exceptions
+        self.expected_pywin_exceptions = expected_pywin_exceptions
 
     def cleanup_closed_tabs(self):
         # returns amount of removed tabs
@@ -86,7 +93,8 @@ class BrowserObserver:
         try:
             self.process_hwnd(hwnd)
         except Exception as e:
-            if type(e) is self.expected_exceptions:
+            if type(e) in self.expected_exceptions or \
+                    type(e) is pywintypes.error and e.strerror in self.expected_pywin_exceptions:
                 self.known_windows.pop(hwnd)
                 print(f"Expected exception during hwnd processing {hwnd}, hwnd will be reinitialised. ")
                 print(e)

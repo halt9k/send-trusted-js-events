@@ -1,13 +1,6 @@
-import ctypes
-import time
-from functools import wraps
-
-import pyautogui
 from win32con import *
 from win32api import *
 from time import sleep
-
-from win32gui import GetForegroundWindow
 
 from helpers.winapi.windows import unsafe_sleep
 

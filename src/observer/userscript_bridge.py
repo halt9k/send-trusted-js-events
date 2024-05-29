@@ -2,7 +2,7 @@ from enum import Enum
 from typing import Any, Callable
 
 from helpers.winapi.mouse_events import send_click
-from helpers.winapi.windows import get_title
+from helpers.winapi.windows import get_title, set_title
 
 # Common for UserScript and Observer
 # Expected browser tab titles set by UserScript:
@@ -65,7 +65,10 @@ def process_caption(hwnd) -> bool:
         raise NotImplementedError
 
     print(f'Delivering trusted input to {hwnd}, command is {msg}')
-    return req_handler(hwnd, msg)
+    res = req_handler(hwnd, msg)
+    if res:
+        set_title(hwnd, DONE)
+    return res
 
 
 req_handlers[REQ_CLICK] = process_click

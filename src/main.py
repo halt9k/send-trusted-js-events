@@ -16,5 +16,6 @@ if __name__ == '__main__':
                                               caption_filters=["Google", 'lichess.org']
                                               )
     observer = BrowserObserver(user_observer_script,
-                               expected_exceptions=[MissingWindowFocusException])
+                               expected_exceptions=[MissingWindowFocusException],
+                               expected_pywin_exceptions=['Invalid window handle.'])
     observer.run()

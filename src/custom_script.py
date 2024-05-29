@@ -7,12 +7,12 @@ from win32con import VK_LCONTROL
 
 from code_tools.virtual_methods import override
 from helpers.winapi.hotkey_events import press_key, press_key_modified
-from helpers.winapi.windows import shrink_and_arrange, get_window_state, get_title, activate, get_dims, \
+from helpers.winapi.windows import shrink_and_arrange, get_window_state, get_title, switch_focus_window, get_dims, \
     unsafe_sleep, WindowState, is_active_window_maxed
 from observer.userscript_bridge import try_get_caption_request
 from observer.custom_script_abstract import CustomScriptAbstract
 
-ARRANGE_WIDTH, ARRANGE_HEIGHT = 330, 510
+ARRANGE_WIDTH, ARRANGE_HEIGHT = 350, 510
 
 
 @dataclass(init=True)
@@ -29,8 +29,8 @@ class UserObserverScript(CustomScriptAbstract):
     random_intervals_sec: float = 0.3
     proc_filters: list = None
     caption_filters: list = None
-    known_windows = copy({})
-    keys_passed = copy({})
+    known_windows = {}
+    keys_passed = {}
 
     @staticmethod
     def mute_tab(hwnd):
@@ -48,7 +48,7 @@ class UserObserverScript(CustomScriptAbstract):
             return False
 
         if hwnd not in self.keys_passed:
-            with activate(hwnd):
+            with switch_focus_window(hwnd):
                 self.mute_tab(hwnd)
 
                 # relies on userscript auto start by s
@@ -72,7 +72,7 @@ class UserObserverScript(CustomScriptAbstract):
             return True
 
         caption = get_title(hwnd)
-        contains = [filter for filter in self.caption_filters if filter in caption]
+        contains = [f for f in self.caption_filters if f in caption]
         if len(contains) > 0:
             self.known_windows[hwnd] = True
             return True

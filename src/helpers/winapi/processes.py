@@ -10,7 +10,7 @@ import win32process as wproc
 
 
 def enum_windows_proc(hwnd, param):
-    """ Winapi callback """
+    """ Callback for Winapi  """
 
     pid = param.get("pid", None)
     data = param.get("data", None)
@@ -58,8 +58,6 @@ def try_get_exe_path(pid):
 
 
 def get_module_paths(proc_filter_func=None):
-    """ proc_name_filters: case insensitive """
-
     procs = wproc.EnumProcesses()
     pid_paths = [(pid, try_get_exe_path(pid)) for pid in procs]
     filtered = [(pid, Path(path).name) for pid, path in pid_paths if path]

@@ -28,8 +28,10 @@ def get_dims(hwnd):
 
 
 def shrink_and_arrange(hwnd, n, shrinked_width, shrinked_height):
-    """ resizes window (browser tab)
-    and arranges them in two rows starting from right bottom corner n = 1 """
+    """
+    Routine good for simultaneous testing of multiple tabs. Resizes window (browser tab)
+    and arranges them in two rows starting from right bottom corner n = 1
+    """
 
     user32 = ctypes.windll.user32
     screensize = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
@@ -48,8 +50,8 @@ def shrink_and_arrange(hwnd, n, shrinked_width, shrinked_height):
     if alreday_moved:
         return False
 
+    print(f'Trying to rearrange hwnd: {hwnd}')
     win32gui.MoveWindow(hwnd, x, y, w, h, True)
-    print(f'Hwnd shrink requested: {hwnd}')
     return True
 
 
@@ -65,7 +67,7 @@ def unsafe_sleep(delay, hwnd, require_active=False, keep_state=False):
     print(f"Sleep {delay}")
     sleep(delay)
 
-    if not if_window_exist(hwnd):
+    if is_window_closed(hwnd):
         raise Exception(f'Window closed while sleep: {hwnd}')
 
     if keep_state and state != get_window_state(hwnd):
@@ -77,7 +79,7 @@ def unsafe_sleep(delay, hwnd, require_active=False, keep_state=False):
 
 
 @contextmanager
-def activate(hwnd, post_delay=0.15):
+def switch_focus_window(hwnd, post_delay=0.15):
     prev_hwnd = win32gui.GetForegroundWindow()
 
     if prev_hwnd != hwnd:
@@ -107,8 +109,8 @@ def set_title(hwnd, title):
     win32gui.SetWindowText(hwnd, title)
 
 
-def if_window_exist(hwnd):
-    return win32gui.IsWindow(hwnd)
+def is_window_closed(hwnd):
+    return not win32gui.IsWindow(hwnd)
 
 
 def is_active_window_maxed(proc_filter_func) -> bool:

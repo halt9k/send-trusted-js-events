@@ -32,7 +32,7 @@ def process_click(hwnd: int, args: str) -> bool:
 
 
 # TODO other reqs
-def process_hotkey(hwnd, args: str) -> bool:
+def process_hotkey(hwnd: int, args: str) -> bool:
     raise NotImplementedError
 
 
@@ -56,16 +56,16 @@ def process_caption(hwnd) -> bool:
         return False
 
     msg = get_title(hwnd)
-    msg = msg.replace(req, '')
     for rep in ERASE_TEXT:
         msg = msg.replace(rep, '')
+    args = msg.replace(req, '')
 
     req_handler: Callable[[int, str], bool] = req_handlers[req]
     if not req_handler:
         raise NotImplementedError
 
     print(f'Delivering trusted input to {hwnd}, command is {msg}')
-    res = req_handler(hwnd, msg)
+    res = req_handler(hwnd, args)
     if res:
         set_title(hwnd, DONE)
     return res

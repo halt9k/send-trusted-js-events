@@ -2,13 +2,14 @@ from os import chdir
 from pathlib import Path
 from sys import path
 
-
-# this module is intended to be imported before all other src/* modules
-# allows to keep all the sources organized with working_dir as root:
-# working_dir/README.md
-# working_dir/<main launch files>
-# working_dir/src/*.py
-# working_dir/data/*
+"""
+ This module is intended to be imported before all other src/* modules
+ allows to keep sources organized with working dir . as root:
+ ./README.md
+ ./<main launch files>
+ ./src/*.py
+ ./data/*
+"""
 
 
 def ch_project_root_dir():

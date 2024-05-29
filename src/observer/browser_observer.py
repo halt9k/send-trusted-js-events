@@ -4,7 +4,7 @@ from typing import Type
 
 import pywintypes
 
-from helpers.winapi.windows import get_title, if_window_exist
+from helpers.winapi.windows import get_title, is_window_closed
 from observer.userscript_bridge import process_caption, try_get_caption_request
 from src.observer.custom_script_abstract import CustomScriptAbstract
 from helpers.winapi.processes import get_module_paths, get_process_windows
@@ -25,11 +25,10 @@ class BrowserObserver:
 
     def __init__(self, user_script: CustomScriptAbstract,
                  expected_exceptions: [Type[Exception]],
-                 expected_pywin_exceptions: [int]):
+                 expected_pywin_exceptions: [str]):
         """
-        catch_exceptions: all Winapi calls may cause exceptions (Window closed), by default they are caught
-        expected_exceptions: which to surpress
-        expected_pywin_exceptions: which pywintype.error codes to surpress
+        expected_exceptions: which python exceptions to ignore
+        expected_pywin_exceptions: which pywintype.error descriptions to ignore
         """
         self.user_script = user_script
         self.expected_exceptions = expected_exceptions
@@ -40,10 +39,8 @@ class BrowserObserver:
 
         pop_keys = []
         for key in self.known_windows.keys():
-            if self.known_windows[key].closed:
+            if is_window_closed(key):
                 pop_keys += [key]
-
-            self.known_windows[key].closed = not if_window_exist(key)
 
         for key in pop_keys:
             self.known_windows.pop(key)
@@ -63,7 +60,6 @@ class BrowserObserver:
         if hwnd not in self.known_windows.keys():
             self.known_windows[hwnd] = TabInfo()
 
-            self.known_windows[hwnd].closed = False
             self.known_windows[hwnd].initialized = False
             self.known_windows[hwnd].added = datetime.time()
             self.known_windows[hwnd].total_messages_send = 0
@@ -78,7 +74,7 @@ class BrowserObserver:
         if not self.initialize_window(hwnd):
             return
 
-        initialized_windows = [key for key, val in self.known_windows.items() if val.initialized and not val.closed]
+        initialized_windows = [key for key, val in self.known_windows.items() if val.initialized]
         n = initialized_windows.index(hwnd)
         self.user_script.on_custom_processing(hwnd, n, self.known_windows[hwnd].total_messages_send)
 
@@ -93,8 +89,9 @@ class BrowserObserver:
         try:
             self.process_hwnd(hwnd)
         except Exception as e:
-            if type(e) in self.expected_exceptions or \
-                    type(e) is pywintypes.error and e.strerror in self.expected_pywin_exceptions:
+            ignore = type(e) in self.expected_exceptions or \
+                (type(e) is pywintypes.error and e.strerror in self.expected_pywin_exceptions)
+            if ignore:
                 self.known_windows.pop(hwnd)
                 print(f"Expected exception during hwnd processing {hwnd}, hwnd will be reinitialised. ")
                 print(e)

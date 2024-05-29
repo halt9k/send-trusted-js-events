@@ -72,7 +72,8 @@ class UserObserverScript(CustomScriptAbstract):
             return True
 
         caption = get_title(hwnd)
-        if caption in self.caption_filters:
+        contains = [filter for filter in self.caption_filters if filter in caption]
+        if len(contains) > 0:
             self.known_windows[hwnd] = True
             return True
         return False

@@ -8,11 +8,12 @@ from win32con import VK_LCONTROL
 from code_tools.virtual_methods import override
 from helpers.winapi.hotkey_events import press_key, press_key_modified
 from helpers.winapi.windows import shrink_and_arrange, get_window_state, get_title, switch_focus_window, get_dims, \
-    unsafe_sleep, WindowState, is_active_window_maxed
+    unsafe_sleep, WindowState, is_active_window_maxed, is_window_closed
 from observer.userscript_bridge import try_get_caption_request
 from observer.custom_script_abstract import CustomScriptAbstract
 
-ARRANGE_WIDTH, ARRANGE_HEIGHT = 350, 510
+ARRANGE_WIDTH, ARRANGE_HEIGHT = 350, 500
+ERR = 30
 
 
 @dataclass(init=True)
@@ -28,7 +29,7 @@ class UserObserverScript(CustomScriptAbstract):
     intervals_sec: float = 0.1
     random_intervals_sec: float = 0.3
     proc_filters: list = None
-    caption_filters: list = None
+    initial_caption_filters: list = None
     known_windows = {}
     keys_passed = {}
 
@@ -40,7 +41,7 @@ class UserObserverScript(CustomScriptAbstract):
     @staticmethod
     def is_shrinked(hwnd):
         w, h = get_dims(hwnd)
-        return abs(w - ARRANGE_WIDTH) < 10 and abs(h - ARRANGE_HEIGHT) < 10
+        return abs(w - ARRANGE_WIDTH) < ERR and abs(h - ARRANGE_HEIGHT) < ERR
 
     @override
     def on_initial_window_setup(self, hwnd) -> bool:
@@ -71,8 +72,12 @@ class UserObserverScript(CustomScriptAbstract):
         if hwnd in self.known_windows:
             return True
 
+        if try_get_caption_request(hwnd):
+            print(f'Adding possibly earlier abadoned window {hwnd} since a request detected.')
+            return True
+
         caption = get_title(hwnd)
-        contains = [f for f in self.caption_filters if f in caption]
+        contains = [f for f in self.initial_caption_filters if f in caption]
         if len(contains) > 0:
             self.known_windows[hwnd] = True
             return True
@@ -82,9 +87,14 @@ class UserObserverScript(CustomScriptAbstract):
     def on_process_module_filter(self, module: str) -> bool:
         return module.lower() in self.proc_filters
 
+    def cleanup(self):
+        self.known_windows = {k: v for k, v in self.known_windows.items() if not is_window_closed(k)}
+        self.keys_passed = {k: v for k, v in self.keys_passed.items() if not is_window_closed(k)}
+
     @override
     def on_loop_sleep(self) -> bool:
         sleep(self.intervals_sec + random() * self.random_intervals_sec)
+        self.cleanup()
         if self.disable_if_maximized:
             return is_active_window_maxed(self.on_process_module_filter)
         else:

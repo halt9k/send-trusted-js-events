@@ -78,12 +78,8 @@ def press_sys_key(hwnd, key_code):
 def press_key(hwnd, key_code, delay_sec=0.1):
     """ key_code: can be ord('M'), ord('r'), ... """
 
-    with unsafe_sleep(delay_sec, hwnd, require_active=True, keep_state=True):
-        PostMessage(hwnd, WM_KEYDOWN, key_code, 0)
-
-    # TODO remove?
-    with unsafe_sleep(delay_sec, hwnd, require_active=True, keep_state=True):
-        PostMessage(hwnd, WM_KEYUP, key_code, 0)
+    PostMessage(hwnd, WM_KEYDOWN, key_code, 0)
+    PostMessage(hwnd, WM_KEYUP, key_code, 0)
 
 
 def press_key_modified(hwnd, key_code, modifier_key_code, delay_sec=0.1):
@@ -91,8 +87,9 @@ def press_key_modified(hwnd, key_code, modifier_key_code, delay_sec=0.1):
     """ modifier_key_code: usually will be win32con.VK_*, like VK_LSHIFT, VK_RSHIFT, VK_LCONTROL, VK_RCONTROL """
 
     # PostMessage may not work in combo
-    keybd_event(modifier_key_code, 0, 0, 0)
-    sleep(delay_sec)
+    with unsafe_sleep(delay_sec, hwnd, require_active=True, keep_state=True):
+        keybd_event(modifier_key_code, 0, 0, 0)
     press_key(hwnd, key_code, delay_sec)
-    keybd_event(modifier_key_code, 0, KEYEVENTF_KEYUP, 0)
-    sleep(delay_sec)
+    with unsafe_sleep(delay_sec, hwnd, require_active=True, keep_state=True):
+        keybd_event(modifier_key_code, 0, KEYEVENTF_KEYUP, 0)
+

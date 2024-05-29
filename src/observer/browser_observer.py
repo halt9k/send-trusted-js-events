@@ -24,15 +24,15 @@ class BrowserObserver:
     observations_count = 0
 
     def __init__(self, user_script: CustomScriptAbstract,
-                 expected_exceptions: [Type[Exception]],
-                 expected_pywin_exceptions: [str]):
+                 ignore_exceptions: [Type[Exception]],
+                 ignore_pywin_exceptions: [str]):
         """
         expected_exceptions: which python exceptions to ignore
         expected_pywin_exceptions: which pywintype.error descriptions to ignore
         """
         self.user_script = user_script
-        self.expected_exceptions = expected_exceptions
-        self.expected_pywin_exceptions = expected_pywin_exceptions
+        self.ignore_exceptions = ignore_exceptions
+        self.ignore_pywin_exceptions = ignore_pywin_exceptions
 
     def cleanup_closed_tabs(self):
         # returns amount of removed tabs
@@ -81,16 +81,14 @@ class BrowserObserver:
         self.deliver_caption_requests(hwnd)
 
     def process_hwnd_safely(self, hwnd):
-        # TODO not transparent enough
-        req = try_get_caption_request(hwnd)
-        if not req and not self.user_script.on_hwnd_filter(hwnd):
+        if not self.user_script.on_hwnd_filter(hwnd):
             return
 
         try:
             self.process_hwnd(hwnd)
         except Exception as e:
-            ignore = type(e) in self.expected_exceptions or \
-                (type(e) is pywintypes.error and e.strerror in self.expected_pywin_exceptions)
+            ignore = type(e) in self.ignore_exceptions or \
+                     (type(e) is pywintypes.error and e.strerror in self.ignore_pywin_exceptions)
             if ignore:
                 self.known_windows.pop(hwnd)
                 print(f"Expected exception during hwnd processing {hwnd}, hwnd will be reinitialised. ")

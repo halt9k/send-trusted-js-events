@@ -13,9 +13,9 @@ if __name__ == '__main__':
                                               intervals_sec=0.1,
                                               random_intervals_sec=0.3,
                                               proc_filters=["chrome.exe", "firefox.exe"],
-                                              caption_filters=["Google", 'lichess.org']
+                                              initial_caption_filters=["Google", 'lichess.org']
                                               )
     observer = BrowserObserver(user_observer_script,
-                               expected_exceptions=[MissingWindowFocusException],
-                               expected_pywin_exceptions=['Invalid window handle.'])
+                               ignore_exceptions=[MissingWindowFocusException],
+                               ignore_pywin_exceptions=['Invalid window handle.'])
     observer.run()

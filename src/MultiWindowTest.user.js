@@ -29,7 +29,10 @@ var last_target_pos = {x: 0, y: 0}
 var my_pieces, all_pieces
 var move_info
 const CSS_SEL_OPPONENT_LEFT = ".ruser-top > i:nth-child(1)"
-const REQ_CLICK = 'REQ CLICK %X %Y'
+const REQ_CLICK = 'REQ CLICK ${X} ${Y}'
+const SCREEN_RATIO = window.devicePixelRatio
+const ARRANGE_WIDTH = 350 / SCREEN_RATIO, ARRANGE_HEIGHT = 500 / SCREEN_RATIO
+const TOOLBAR_HEIGHT = 50 / SCREEN_RATIO
 
 
 function try_mute()
@@ -147,7 +150,7 @@ function click_board_element(elem)
 
 	log_ex('click on: ' + pos.x + ' ' + pos.y, location)
 	let xy = get_screen_pos_randomized(elem)
-	document.title = REQ_CLICK.replace('%X', xy.x).replace('%Y', xy.y);
+	document.title = REQ_CLICK.replace('${X}', xy.x).replace('${Y}', xy.y);
 
 	// Unfinished, press still not happening, trusted?
 	// press_on_board(elem, pos.x, pos.y);
@@ -438,13 +441,16 @@ function getRandomInt(min, max)
 
 
 function try_move_new_tab(){
-    if ($(window).width() < 400 || $(window).height() < 400)
+    if (window.outerWidth < (ARRANGE_WIDTH + 10) || window.outerHeight < (ARRANGE_HEIGHT + 10))
 		return
 
 	log_ex('open_new_tab', location)
 
-	let left = screen.width - 300
-	let windowFeatures = "width=300,height=400,left=" + left + ",top=0"
+	let left = screen.width - ARRANGE_WIDTH
+	let w = ARRANGE_WIDTH + (window.innerWidth - window.outerWidth)
+	let h = ARRANGE_HEIGHT + TOOLBAR_HEIGHT + (window.innerHeight - window.outerHeight)
+	debugger;
+	let windowFeatures = `width=${w},height=${h},left=${left},top=0`
 
 	let wnd = window.open(window.location.href, "_blank", windowFeatures)
 
@@ -550,7 +556,7 @@ auto_create_new_game()
 
 
 function is_windowed_game_page() {
-	let windowed = window.outerWidth > 400
+	let windowed = window.outerWidth > ARRANGE_WIDTH + 10
 	let game_url = document.URL.match('https://lichess.org/[a-z].*') == document.URL
 	return game_url && windowed;
 }

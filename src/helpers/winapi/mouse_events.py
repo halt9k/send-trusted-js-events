@@ -19,11 +19,14 @@ def make_lparam(x, y):
 
 
 def send_click(hwnd, x, y):
-    """ Sends a click to hwnd relative to window corner """
+    """
+    Sends a click to hwnd relative to window corner,
+    does not require focus (on some web pages?)
+    """
 
     w, h = get_dims(hwnd)
     if x > w or y > h:
-        print(f'Click request outside of window: xy: {x} {y}, wh: {w} {h}')
+        print(f'Warning: click request outside of window: xy: {x} {y}, wh: {w} {h}')
         return
 
     # PostMessage expects relative to Client which offsets from window corner

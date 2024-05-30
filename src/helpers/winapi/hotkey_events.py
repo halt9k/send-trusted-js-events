@@ -1,6 +1,7 @@
+from contextlib import contextmanager
+
 from win32con import *
 from win32api import *
-from time import sleep
 
 from helpers.winapi.windows import unsafe_sleep
 
@@ -76,7 +77,10 @@ def press_sys_key(hwnd, key_code):
 
 
 def press_key(hwnd, key_code, delay_sec=0.1):
-    """ key_code: can be ord('M'), ord('r'), ... """
+    """
+    Can send standard keys, requres focus when multiple tabs opened
+    key_code: can be ord('M'), ord('r'), ...
+    """
 
     # specifically for browsers with multiple tabs,
     # PostMessage requres focus active or it may send to the wrong tab
@@ -85,13 +89,17 @@ def press_key(hwnd, key_code, delay_sec=0.1):
         PostMessage(hwnd, WM_KEYUP, key_code, 0)
 
 
-def press_key_modified(hwnd, key_code, modifier_key_code, delay_sec=0.1):
-    """ modifier_key_code: usually will be win32con.VK_*, like VK_LSHIFT, VK_RSHIFT, VK_LCONTROL, VK_RCONTROL """
+@contextmanager
+def press_modifier(hwnd, modifier_key_code, delay_sec=0.1):
+    """
+    Can send Ctrl + * hotkeys, requres focus when multiple tabs opened
+    modifier_key_code: usually will be win32con.VK_*, like VK_LSHIFT, VK_RSHIFT, VK_LCONTROL, VK_RCONTROL
+    """
 
-    # PostMessage may not work in combo
     with unsafe_sleep(delay_sec, hwnd, require_active=True, keep_state=True):
+        # TODO PostMessage may not work in combo? so keybd_event used
         keybd_event(modifier_key_code, 0, 0, 0)
-    press_key(hwnd, key_code, delay_sec)
+    yield
     with unsafe_sleep(delay_sec, hwnd, require_active=True, keep_state=True):
         keybd_event(modifier_key_code, 0, KEYEVENTF_KEYUP, 0)
 

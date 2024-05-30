@@ -6,7 +6,7 @@ from time import sleep
 from win32con import VK_LCONTROL
 
 from code_tools.virtual_methods import override
-from helpers.winapi.hotkey_events import press_key, press_key_modified
+from helpers.winapi.hotkey_events import press_key, press_modifier
 from helpers.winapi.windows import shrink_and_arrange, get_window_state, get_title, switch_focus_window, get_dims, \
     unsafe_sleep, WindowState, is_active_window_maxed, is_window_closed
 from observer.userscript_bridge import try_get_caption_request
@@ -35,7 +35,8 @@ class UserObserverScript(CustomScriptAbstract):
 
     @staticmethod
     def mute_tab(hwnd):
-        press_key_modified(hwnd, key_code=ord('M'), modifier_key_code=VK_LCONTROL)
+        with press_modifier(hwnd, modifier_key_code=VK_LCONTROL):
+            press_key(hwnd, key_code=ord('M'))
 
     @staticmethod
     def is_shrinked(hwnd):
@@ -72,6 +73,7 @@ class UserObserverScript(CustomScriptAbstract):
 
         if try_get_caption_request(hwnd):
             print(f'Adding possibly earlier abadoned window {hwnd} since a request detected.')
+            self.known_windows[hwnd] = True
             return True
 
         caption = get_title(hwnd)

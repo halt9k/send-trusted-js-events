@@ -1,16 +1,13 @@
 // ==UserScript==
 // @name         Auto Play
 // @namespace    http://tampermonkey.net/
-// @version      0.1
+// @version      0.9
 // @description  try to take over the world!
 // @author       You
 // @icon         data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==
 // @match        https://lichess.org/*
-// @match        https://wiki.greasespot.net/*
 // @grant unsafeWindow
-// @grant debug
 // @grant window.close
-// @grant window.jQuery
 // @grant window.focus
 // @grant window.onurlchange
 // @grant GM_openInTab
@@ -77,13 +74,25 @@ function get_transformed_pos(elem, posAtMiddle)
 	}
 
 
+function roundIfClose(val, allowedDist) {
+    let valInt = Math.round(val)
+    if (Math.abs(val - valInt) < allowedDist)
+        return valInt
+    else
+        return undefined
+}
+
+
 function try_get_board_square_ij(elem){
 	// i, j 1-8
 	let pos_px = get_transformed_pos(elem, false)
 	let sz = get_square_size();
-	let pos = {x: pos_px.x / sz.x, y: pos_px.y / sz.y}
+    let pos = {
+        x: roundIfClose(pos_px.x / sz.x, 0.01),
+        y: roundIfClose(pos_px.y / sz.y, 0.01)
+    }
 
-	if (Number.isInteger(pos.x) && Number.isInteger(pos.y))
+	if (pos.x && pos.y)
 		return pos
 	else
 		return undefined

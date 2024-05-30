@@ -1,6 +1,9 @@
 from enum import Enum
 from typing import Any, Callable
 
+from win32con import VK_LCONTROL
+
+from helpers.winapi.hotkey_events import press_key, press_modifier
 from helpers.winapi.mouse_events import send_click
 from helpers.winapi.windows import get_title, set_title
 
@@ -12,16 +15,14 @@ from helpers.winapi.windows import get_title, set_title
 # REQ DONE
 
 
-REQ_CLICK, REQ_KYES = 'REQ CLICK ', 'REQ KEYS '
-req_handlers = {REQ_CLICK: None, REQ_KYES: None}
+REQ_CLICK, REQ_KEYS = 'REQ CLICK ', 'REQ KEYS '
+req_handlers = {REQ_CLICK: None, REQ_KEYS: None}
 DONE = 'DONE'
 ERASE_TEXT = [' — Mozilla Firefox']
+CTRL_MODIFIER = 'Ctrl+'
 
 
 def process_click(hwnd: int, args: str) -> bool:
-    # coords_txt = cords_txt.replace('translate(', '')
-    # coords_txt = coords_txt.replace('px, ', ' ')
-    # coords = [int(s) for s in cords_txt.split() if (s.isdigit() or s == '-')]
     coords = [int(float(s)) for s in args.split()]
     if not coords:
         return False
@@ -31,9 +32,26 @@ def process_click(hwnd: int, args: str) -> bool:
     return True
 
 
+def ensure_simple_key_code(key_code):
+    return 'a' < key_code < 'z' or 'A' < key_code < 'Z'
+
+
 # TODO other reqs
 def process_hotkey(hwnd: int, args: str) -> bool:
-    raise NotImplementedError
+    hotkeys = [s for s in args.split()]
+    for key in hotkeys:
+        if ensure_simple_key_code(key):
+            press_key(hwnd, ord(key))
+        elif CTRL_MODIFIER in key:
+            assert len(key) == 6
+            key = key[-1]
+            ensure_simple_key_code(key)
+            with press_modifier(hwnd, VK_LCONTROL):
+                press_key(hwnd, ord(key))
+        else:
+            raise NotImplementedError
+    return True
+
 
 
 def try_get_caption_request(hwnd):
@@ -72,3 +90,4 @@ def process_caption(hwnd) -> bool:
 
 
 req_handlers[REQ_CLICK] = process_click
+req_handlers[REQ_KEYS] = process_hotkey

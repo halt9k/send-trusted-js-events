@@ -11,10 +11,7 @@ if __name__ == '__main__':
 
     user_observer_script = UserObserverScript(disable_if_maximized=True,
                                               intervals_sec=0.1,
-                                              random_intervals_sec=0.3,
-                                              proc_filters=["chrome.exe", "firefox.exe"],
-                                              initial_caption_filters=["Google", 'lichess.org']
-                                              )
+                                              proc_filters=["chrome.exe", "firefox.exe"])
     observer = BrowserObserver(user_observer_script,
                                ignore_exceptions=[MissingWindowFocusException],
                                ignore_pywin_exceptions=['Invalid window handle.'])

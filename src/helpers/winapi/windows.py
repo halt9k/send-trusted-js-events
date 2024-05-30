@@ -107,6 +107,7 @@ def get_title(hwnd):
 
 
 def set_title(hwnd, title):
+    # TODO fails on chrome
     win32gui.SetWindowText(hwnd, title)
 
 

@@ -18,18 +18,17 @@ from helpers.winapi.windows import get_title, set_title
 REQ_CLICK, REQ_KEYS = 'REQ CLICK ', 'REQ KEYS '
 req_handlers = {REQ_CLICK: None, REQ_KEYS: None}
 DONE = 'DONE'
-ERASE_TEXT = [' — Mozilla Firefox']
+ERASE_TEXT = [' — Mozilla Firefox', ' - Google Chrome']
 CTRL_MODIFIER = 'Ctrl+'
 
 
 def process_click(hwnd: int, args: str) -> bool:
     coords = [int(float(s)) for s in args.split()]
     if not coords:
-        return False
+        raise Exception("Incorrect command")
 
     assert len(coords) == 2
-    send_click(hwnd, coords[0], coords[1])
-    return True
+    return send_click(hwnd, coords[0], coords[1])
 
 
 def ensure_simple_key_code(key_code):
@@ -53,10 +52,9 @@ def process_hotkey(hwnd: int, args: str) -> bool:
     return True
 
 
-
 def try_get_caption_request(hwnd):
-    title = get_title(hwnd)
-    found_keys = [key for key in req_handlers.keys() if key in title]
+    title: str = get_title(hwnd)
+    found_keys = [key for key in req_handlers.keys() if title.startswith(key)]
 
     if len(found_keys) > 2:
         raise Exception("Userscript placed ambiguous caption commands")

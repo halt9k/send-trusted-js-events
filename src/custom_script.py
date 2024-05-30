@@ -29,7 +29,7 @@ class UserObserverScript(CustomScriptAbstract):
     intervals_sec: float = 0.1
     random_intervals_sec: float = 0.3
     proc_filters: list = None
-    caption_filters: list = None
+    initial_caption_filters: list = None
     known_windows = {}
     keys_passed = {}
 
@@ -72,8 +72,12 @@ class UserObserverScript(CustomScriptAbstract):
         if hwnd in self.known_windows:
             return True
 
+        if try_get_caption_request(hwnd):
+            print(f'Adding possibly earlier abadoned window {hwnd} since a request detected.')
+            return True
+
         caption = get_title(hwnd)
-        contains = [f for f in self.caption_filters if f in caption]
+        contains = [f for f in self.initial_caption_filters if f in caption]
         if len(contains) > 0:
             self.known_windows[hwnd] = True
             return True

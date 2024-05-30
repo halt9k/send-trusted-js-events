@@ -81,9 +81,7 @@ class BrowserObserver:
         self.deliver_caption_requests(hwnd)
 
     def process_hwnd_safely(self, hwnd):
-        # TODO not transparent enough
-        req = try_get_caption_request(hwnd)
-        if not req and not self.user_script.on_hwnd_filter(hwnd):
+        if not self.user_script.on_hwnd_filter(hwnd):
             return
 
         try:

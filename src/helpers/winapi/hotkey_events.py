@@ -78,12 +78,14 @@ def press_sys_key(hwnd, key_code):
 def press_key(hwnd, key_code, delay_sec=0.1):
     """ key_code: can be ord('M'), ord('r'), ... """
 
-    PostMessage(hwnd, WM_KEYDOWN, key_code, 0)
-    PostMessage(hwnd, WM_KEYUP, key_code, 0)
+    # specifically for browsers with multiple tabs,
+    # PostMessage requres focus active or it may send to the wrong tab
+    with unsafe_sleep(0, hwnd, require_active=True, keep_state=True):
+        PostMessage(hwnd, WM_KEYDOWN, key_code, 0)
+        PostMessage(hwnd, WM_KEYUP, key_code, 0)
 
 
 def press_key_modified(hwnd, key_code, modifier_key_code, delay_sec=0.1):
-    # TODO can it send without focus?
     """ modifier_key_code: usually will be win32con.VK_*, like VK_LSHIFT, VK_RSHIFT, VK_LCONTROL, VK_RCONTROL """
 
     # PostMessage may not work in combo

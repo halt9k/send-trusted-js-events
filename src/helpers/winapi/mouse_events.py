@@ -1,6 +1,8 @@
 import win32api
 
-from win32gui import ScreenToClient, SetWindowText
+from win32gui import ClientToScreen
+
+from helpers.winapi.windows import get_dims
 
 MOUSEEVENTF_MOVE = 0x0001  # mouse move
 MOUSEEVENTF_ABSOLUTE = 0x8000  # absolute move
@@ -17,14 +19,16 @@ def make_lparam(x, y):
 
 
 def send_click(hwnd, x, y):
-    # TODO fix to relative?
-    """ Sends a click to hwnd, but using absolute position """
+    """ Sends a click to hwnd relative to window corner """
 
-    # l, t, r, b = win32gui.GetClientRect(hwnd)
-    cx, cy = ScreenToClient(hwnd, (x, y))
-    # x, y = xx + px, yy + py
+    w, h = get_dims(hwnd)
 
-    win32api.PostMessage(hwnd, WM_LBUTTONDOWN, 1, make_lparam(cx, cy))
-    win32api.PostMessage(hwnd, WM_LBUTTONUP, 0, make_lparam(cx, cy))
+    if x > w or y > h:
+        print(f'Click request outside of window: xy: {x} {y}, wh: {w} {h}')
+        return
 
-    print(f'Client x: {cx} y: {cy}  Screen x: {x} y: {y}')
+    sx, sy = ClientToScreen(hwnd, (x, y))
+    print(f'Sending mouse click to client xy: {x} {y}  Screen xy: {sx} {sy}')
+    win32api.PostMessage(hwnd, WM_LBUTTONDOWN, 1, make_lparam(x, y))
+    win32api.PostMessage(hwnd, WM_LBUTTONUP, 0, make_lparam(x, y))
+

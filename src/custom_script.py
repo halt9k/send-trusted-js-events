@@ -35,8 +35,7 @@ class UserObserverScript(CustomScriptAbstract):
 
     @staticmethod
     def mute_tab(hwnd):
-        with unsafe_sleep(0.1, hwnd, require_active=True):
-            press_key_modified(hwnd, key_code=ord('M'), modifier_key_code=VK_LCONTROL)
+        press_key_modified(hwnd, key_code=ord('M'), modifier_key_code=VK_LCONTROL)
 
     @staticmethod
     def is_shrinked(hwnd):
@@ -51,10 +50,9 @@ class UserObserverScript(CustomScriptAbstract):
         if hwnd not in self.keys_passed:
             with switch_focus_window(hwnd):
                 self.mute_tab(hwnd)
-
                 # relies on userscript auto start by s
                 press_key(hwnd, ord('R'))
-                self.keys_passed[hwnd] = True
+            self.keys_passed[hwnd] = True
 
         req = try_get_caption_request(hwnd)
         if req:

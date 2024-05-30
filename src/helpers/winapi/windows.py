@@ -64,8 +64,9 @@ def unsafe_sleep(delay, hwnd, require_active=False, keep_state=False):
 
     state = get_window_state(hwnd) if keep_state else None
 
-    print(f"Sleep {delay}")
-    sleep(delay)
+    if delay > 0:
+        print(f"Sleep {delay}")
+        sleep(delay)
 
     if is_window_closed(hwnd):
         raise Exception(f'Window closed while sleep: {hwnd}')

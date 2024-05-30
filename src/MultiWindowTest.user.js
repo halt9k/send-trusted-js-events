@@ -31,7 +31,7 @@ var move_info
 const CSS_SEL_OPPONENT_LEFT = ".ruser-top > i:nth-child(1)"
 const REQ_CLICK = 'REQ CLICK ${X} ${Y}'
 const SCREEN_RATIO = window.devicePixelRatio
-const ARRANGE_WIDTH = 350 / SCREEN_RATIO, ARRANGE_HEIGHT = 500 / SCREEN_RATIO
+const ARRANGE_WIDTH = 350 / SCREEN_RATIO, ARRANGE_HEIGHT = 510 / SCREEN_RATIO
 const TOOLBAR_HEIGHT = 50 / SCREEN_RATIO
 
 
@@ -45,7 +45,7 @@ function try_mute()
 	}
 
 //mousedown { target: cg-board, buttons: 1, clientX: 824, clientY: 289, layerX: 67, layerY: 249 }
-//clickEvent.initMouseEvent('mousedown', false, false, unsafeWindow, 0, 883, 300, 180, 120, false, false, false, false, 1, null);
+//clickEvent.initMouseEvent('mousedown', false, false, window, 0, 883, 300, 180, 120, false, false, false, false, 1, null);
 
 
 function log_ex(message, loc) {
@@ -62,19 +62,24 @@ function get_square_size()
 	}
 
 
-function try_get_relative_pos(elem)
+function get_transformed_pos(elem, posAtMiddle)
 	{
-	let tr = unsafeWindow.getComputedStyle(elem).transform;
+	let tr = window.getComputedStyle(elem).transform;
 	let mat = new WebKitCSSMatrix(tr);
 
 	let xy = {x: mat.m41, y: mat.m42};
+
+	if (posAtMiddle) {
+		xy.x += elem.offsetWidth / 2;
+		xy.y += elem.offsetHeight / 2;
+	}
 	return xy;
 	}
 
 
-function try_get_board_square(elem)
-	{
-	let pos_px = try_get_relative_pos(elem)
+function try_get_board_square_ij(elem){
+	// i, j 1-8
+	let pos_px = get_transformed_pos(elem, false)
 	let sz = get_square_size();
 	let pos = {x: pos_px.x / sz.x, y: pos_px.y / sz.y}
 
@@ -83,6 +88,28 @@ function try_get_board_square(elem)
 	else
 		return undefined
 	}
+
+
+function getClientPosPx(elem, posAtMiddle){
+	// Returns approximate position in pixels (px) relative to window corner
+
+	let rect = elem.getBoundingClientRect();
+	let screen_scale = window.devicePixelRatio;
+
+	// relative to page corner
+	// (not from window corner, skips window menu area)
+	let elem_x_px = (posAtMiddle? (rect.left + rect.right) / 2 : rect.x) * screen_scale;
+	let elem_y_px = (posAtMiddle? (rect.bottom + rect.top) / 2 : rect.y) * screen_scale;
+
+	// page corner relative to window corner
+	let page_x_px = (window.outerWidth - window.innerWidth)/2 * screen_scale;
+	let page_y_px = (window.outerHeight - window.innerHeight) * screen_scale;
+
+	let x = Math.round(page_x_px + elem_x_px);
+	let y = Math.round(page_y_px + elem_y_px);
+
+	return {x:x, y:y}
+}
 
 
 function getScreenPosPx(elem, posAtMiddle){
@@ -112,22 +139,11 @@ function getScreenPosPx(elem, posAtMiddle){
 }
 
 
-function get_screen_pos_randomized(elem){
-	let xy = getScreenPosPx(elem, true);
-
-	let x = getRandomInt(xy.x - 5, xy.x + 5);
-	let y = getRandomInt(xy.y - 5, xy.y + 5);
+function randomOffset(xy, maxOffset){
+	let x = getRandomInt(xy.x - maxOffset, xy.x + maxOffset);
+	let y = getRandomInt(xy.y - maxOffset, xy.y + maxOffset);
 
 	return {x: x, y: y}
-}
-
-
-function get_relative_pos_randomized(elem) {
-	// returns relative position of the element
-	let rct = try_get_relative_pos(elem);
-	let x = getRandomInt(rct.x + 5, rct.x + elem.offsetWidth - 5);
-	let y = getRandomInt(rct.y + 5, rct.y + elem.offsetHeight - 5);
-	return {x:x, y:y}
 }
 
 
@@ -142,18 +158,17 @@ function press_on_board(elem, x, y) {
 
 function click_board_element(elem)
 	{
-	let pos = get_relative_pos_randomized(elem)
-
-    pos = try_get_board_square(elem);
-	if (!pos)
+    let ij = try_get_board_square_ij(elem);
+	if (!ij)
 		return;
+	log_ex('click on: ' + ij.x + ' ' + ij.y, location);
 
-	log_ex('click on: ' + pos.x + ' ' + pos.y, location)
-	let xy = get_screen_pos_randomized(elem)
+	// let xy = randomOffset(getScreenPosPx(elem, true), 5)
+	let xy = randomOffset(getClientPosPx(elem, true), 5)
 	document.title = REQ_CLICK.replace('${X}', xy.x).replace('${Y}', xy.y);
 
-	// Unfinished, press still not happening, trusted?
-	// press_on_board(elem, pos.x, pos.y);
+	// Unfinished, press still not happening, need trusted?
+	// press_on_board(elem, ij.x, ij.y);
 	}
 
 
@@ -246,7 +261,7 @@ function TryDeclareSelect(elem)
 	{
 	click_board_element(elem);
 	last_selected_value = GetPieceValue(elem);
-	last_target_pos = try_get_board_square(elem)
+	last_target_pos = try_get_board_square_ij(elem)
 
 	if (board_squares_weights && last_target_pos)
 		{board_squares_weights[last_target_pos.x][last_target_pos.y] *= 0.3}
@@ -261,7 +276,7 @@ function TryPrioritySelect()
 	let highest_weight = 0;
 	for (const piece of my_pieces)
 		{
-		let pos = try_get_board_square(piece);
+		let pos = try_get_board_square_ij(piece);
 		if (!pos)
 			continue
 
@@ -280,7 +295,7 @@ function TryPrioritySelect()
 		let movedestN = getRandomInt(0, my_pieces.length - 1)
 		let elem = my_pieces[movedestN];
 
-		let pos = try_get_board_square(elem);
+		let pos = try_get_board_square_ij(elem);
 		if (!pos)
 			continue
 
@@ -338,7 +353,7 @@ function UpdateStates()
 
 	// log_ex(board_squares, location);
 	for (const pce of all_pieces){
-		let pos = try_get_board_square(pce);
+		let pos = try_get_board_square_ij(pce);
 		if (!pos)
 			continue
 
@@ -376,7 +391,7 @@ function TryMove(board_squares)
 		{
 		for (const place of places)
 			{
-			let pos = try_get_board_square(place);
+			let pos = try_get_board_square_ij(place);
 			if (!pos)
 				continue
 
@@ -449,7 +464,6 @@ function try_move_new_tab(){
 	let left = screen.width - ARRANGE_WIDTH
 	let w = ARRANGE_WIDTH + (window.innerWidth - window.outerWidth)
 	let h = ARRANGE_HEIGHT + TOOLBAR_HEIGHT + (window.innerHeight - window.outerHeight)
-	debugger;
 	let windowFeatures = `width=${w},height=${h},left=${left},top=0`
 
 	let wnd = window.open(window.location.href, "_blank", windowFeatures)

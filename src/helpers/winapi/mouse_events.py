@@ -1,6 +1,6 @@
 import win32api
 
-from win32gui import ClientToScreen
+from win32gui import ClientToScreen, ScreenToClient, GetWindowRect
 
 from helpers.winapi.windows import get_dims
 
@@ -22,13 +22,15 @@ def send_click(hwnd, x, y):
     """ Sends a click to hwnd relative to window corner """
 
     w, h = get_dims(hwnd)
-
     if x > w or y > h:
         print(f'Click request outside of window: xy: {x} {y}, wh: {w} {h}')
         return
 
-    sx, sy = ClientToScreen(hwnd, (x, y))
-    print(f'Sending mouse click to client xy: {x} {y}  Screen xy: {sx} {sy}')
-    win32api.PostMessage(hwnd, WM_LBUTTONDOWN, 1, make_lparam(x, y))
-    win32api.PostMessage(hwnd, WM_LBUTTONUP, 0, make_lparam(x, y))
+    # PostMessage expects relative to Client which offsets from window corner
+    l, t, r, b = GetWindowRect(hwnd)
+    cx, cy = ScreenToClient(hwnd, (x + l, y + t))
+
+    print(f'Sending mouse click to Window xy: {x} {y} Screen xy: {cx} {cy}')
+    win32api.PostMessage(hwnd, WM_LBUTTONDOWN, 1, make_lparam(cx, cy))
+    win32api.PostMessage(hwnd, WM_LBUTTONUP, 0, make_lparam(cx, cy))
 

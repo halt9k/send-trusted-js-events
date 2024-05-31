@@ -5,7 +5,7 @@ from win32con import VK_LCONTROL
 
 from helpers.winapi.hotkey_events import press_key, press_modifier
 from helpers.winapi.mouse_events import send_click
-from helpers.winapi.windows import get_title, set_title
+from helpers.winapi.windows import get_title, set_title, switch_focus_window
 
 # Common for UserScript and Observer
 # Expected browser tab titles set by UserScript:
@@ -40,12 +40,13 @@ def process_hotkey(hwnd: int, args: str) -> bool:
     hotkeys = [s for s in args.split()]
     for key in hotkeys:
         if ensure_simple_key_code(key):
-            press_key(hwnd, ord(key))
+            with switch_focus_window(hwnd):
+                press_key(hwnd, ord(key))
         elif CTRL_MODIFIER in key:
             assert len(key) == 6
             key = key[-1]
             ensure_simple_key_code(key)
-            with press_modifier(hwnd, VK_LCONTROL):
+            with switch_focus_window(hwnd), press_modifier(hwnd, VK_LCONTROL):
                 press_key(hwnd, ord(key))
         else:
             raise NotImplementedError

@@ -6,6 +6,7 @@
 // @author       You
 // @icon         data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==
 // @match        https://www.google.com/
+// @require      http://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js
 // @grant unsafeWindow
 // @grant window.close
 // @grant window.focus
@@ -15,11 +16,12 @@
 // @run-at  context-menu
 // ==/UserScript==
 
-// require http://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js
 // require https://gist.github.com/raw/2625891/waitForKeyElements.js
 
-const CSS_SEL_GOOGLE_SEARCH = "div.RNNXgb"
+// "div.RNNXgb" ?
+const CSS_SEL_GOOGLE_SEARCH = 'textarea#APjFqb.gLFyf'
 const CSS_SEL_GOOGLE_SEARCH_BTN = ".FPdoLc"
+const CSS_SEL_GOOGLE_SEARCH_DROPDOWN_BTN = "input.gNO89b[value='Google Search']"
 const CSS_SEL_GOOGLE_LOGO = ".lnXdpd"
 
 const REQ_CLICK = 'REQ CLICK ${X} ${Y}'
@@ -29,6 +31,8 @@ const NEW_WINDOW_TITLE = 'RUN'
 
 
 function log_ex(message, loc) {
+	// location parametr is not yet working as expected link to source line, but better than nothing
+
 	const sourceUrl = `${loc.origin}${loc.pathname}`;
     const log_exMessage = `%c${message} %c@${sourceUrl}`;
     console.log(log_exMessage, 'color: blue;', 'color: green;');
@@ -70,22 +74,25 @@ function sleep(ms) {
 }
 
 
-async function waitUntil(ifDoneFunc) {
-	let delay = 200
-	for (let i = 0; i < 5000; i++)
+async function waitUntil(untilFunc, maxTimeoutSec=10, intervalsSec=0.2) {
+	let maxIt = Math.round(maxTimeoutSec * 1000 / intervalsSec);
+	for (let i = 0; i < maxIt; i++)
 		{
-		await sleep(200)
-        if (ifDoneFunc())
+		await sleep(intervalsSec * 1000)
+        if (untilFunc())
             return;
 		if (i % 50 == 0)
-			log_ex(`Waiting for winapi command fired extrernally ${i * delay}ms`, location);
+			log_ex(`Waiting for winapi command fired extrernally ${i * intervalsSec}s`, location);
 		}
 }
 
 
-function inFocusedTree(elem) {
-	debugger;
-	return document.activeElement
+function inFocusedTree(elem, maxDepth=5) {
+	if (!document.activeElement)
+		return False;
+	let contains = document.activeElement.contains(elem);
+	let depth = $(elem).parents().length - $(document.activeElement).parents().length;
+	return contains && depth < maxDepth;
 }
 
 
@@ -116,18 +123,20 @@ async function main()
 	// but focus switch just to ensure clciks are working correctly
 	let logo = unsafeQuerySelector(CSS_SEL_GOOGLE_LOGO);
 	requestTrustedClick(logo);
-	await waitUntil(inFocusedTree(logo));
+	await waitUntil(() => inFocusedTree(logo));
 
 	let search = unsafeQuerySelector(CSS_SEL_GOOGLE_SEARCH);
 	requestTrustedClick(search);
-	await waitUntil(inFocusedTree(search));
+	await waitUntil(() => inFocusedTree(search));
 
-    await requestTrustedKeys(search, 'H e l l o W o r l d')
-	await waitUntil(() => search.text == 'HelloWorld');
+    await requestTrustedKeys(search, 'H e l l o Space W o r l d');
+	await waitUntil(() => search.textLength == 'Hello World'.length);
 
-    let btn = document.querySelector(CSS_SEL_GOOGLE_SEARCH_BTN)
-	let prevTitle = document.title
+    await requestTrustedKeys(search, 'Enter');
+	let prevTitle = document.title;
     await waitUntil(() => document.title != prevTitle);
+
+	log_ex('Demo script probably worked as expected', location)
 	}
 
 

@@ -99,16 +99,12 @@ def switch_focus_window(hwnd, post_delay=0.15):
 
 def safe_call(func, return_on_error):
     # Most of hwnd related funcs are async and unreliable
-
-    @wraps(func)
-    def wrapped_func(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)()
-        except Exception as e:
-            print(f"Expected exception caught by safety guard: ")
-            print(e)
-            return return_on_error
-    return wrapped_func
+    try:
+        return func()
+    except Exception as e:
+        print(f"Expected exception caught by safety guard: ")
+        print(e)
+        return return_on_error
 
 
 def get_window_state(hwnd) -> WindowState:

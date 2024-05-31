@@ -42,6 +42,6 @@ class UserObserverScript(CustomScriptAbstract):
     def on_loop_sleep(self) -> bool:
         sleep(self.intervals_sec)
         if self.disable_if_maximized:
-            return safe_call(is_active_window_maxed, True)(self.on_process_module_filter)
+            return safe_call(lambda: is_active_window_maxed(self.on_process_module_filter), False)
         else:
             return True

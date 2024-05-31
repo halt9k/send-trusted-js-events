@@ -1,9 +1,9 @@
 from enum import Enum
 from typing import Any, Callable
 
-from win32con import VK_LCONTROL
+from win32con import VK_LCONTROL, VK_RETURN
 
-from helpers.winapi.hotkey_events import press_key, press_modifier
+from helpers.winapi.hotkey_events import press_key, press_modifier, press_char
 from helpers.winapi.mouse_events import send_click
 from helpers.winapi.windows import get_title, set_title, switch_focus_window
 
@@ -31,23 +31,22 @@ def process_click(hwnd: int, args: str) -> bool:
     return send_click(hwnd, coords[0], coords[1])
 
 
-def ensure_simple_key_code(key_code):
-    return 'a' < key_code < 'z' or 'A' < key_code < 'Z'
-
-
-# TODO other reqs
 def process_hotkey(hwnd: int, args: str) -> bool:
     hotkeys = [s for s in args.split()]
-    for key in hotkeys:
-        if ensure_simple_key_code(key):
+    for char in hotkeys:
+        if char == 'Space':
+            char = ' '
+
+        if len(char) == 1:
             with switch_focus_window(hwnd):
-                press_key(hwnd, ord(key))
-        elif CTRL_MODIFIER in key:
-            assert len(key) == 6
-            key = key[-1]
-            ensure_simple_key_code(key)
+                press_char(hwnd, char)
+        elif char == 'Enter':
+            press_key(hwnd, VK_RETURN, True)
+        elif CTRL_MODIFIER in char:
+            assert len(char) == 6
+            char = char[-1]
             with switch_focus_window(hwnd), press_modifier(hwnd, VK_LCONTROL):
-                press_key(hwnd, ord(key))
+                press_char(hwnd, char)
         else:
             raise NotImplementedError
     return True

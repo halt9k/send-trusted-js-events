@@ -1,6 +1,7 @@
 import ctypes
 from contextlib import contextmanager
 from enum import Enum
+from functools import wraps
 from time import sleep
 
 import win32con
@@ -94,6 +95,20 @@ def switch_focus_window(hwnd, post_delay=0.15):
         win32gui.SetForegroundWindow(prev_hwnd)
     else:
         raise MissingWindowFocusException(f'Window activation failed: {hwnd}')
+
+
+def safe_call(func, return_on_error):
+    # Most of hwnd related funcs are async and unreliable
+
+    @wraps(func)
+    def wrapped_func(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)()
+        except Exception as e:
+            print(f"Expected exception caught by safety guard: ")
+            print(e)
+            return return_on_error
+    return wrapped_func
 
 
 def get_window_state(hwnd) -> WindowState:

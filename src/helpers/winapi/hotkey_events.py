@@ -36,6 +36,11 @@ def virtual_code(char):
 
 
 def press_char(hwnd, char: str, only_down=True, delay_sec=0.1):
+    """
+    Can send a-z, A-Z, 0-9, ' '
+    only_down: during tests WM_KEYUP on some sites like Google.com fired 2nd press
+    """
+
     if 'a' < char < 'z' or '0' < char < '9' or char in [' ']:
         press_key(hwnd, virtual_code(char), only_down, delay_sec)
     elif 'A' < char < 'Z':

@@ -6,9 +6,9 @@ from time import sleep
 from win32con import VK_LCONTROL
 
 from code_tools.virtual_methods import override
-from helpers.winapi.hotkey_events import press_key, press_modifier
+from helpers.winapi.hotkey_events import press_key, press_modifier, press_char
 from helpers.winapi.windows import shrink_and_arrange, get_window_state, get_title, switch_focus_window, \
-    is_active_window_maxed, is_window_closed, safe_call
+    is_active_window_maxed, is_window_closed, safe_call, get_dims
 from observer.userscript_bridge import try_get_caption_request
 from observer.custom_script_abstract import CustomScriptAbstract
 
@@ -36,7 +36,7 @@ class UserObserverScript(CustomScriptAbstract):
     @staticmethod
     def mute_tab(hwnd):
         with press_modifier(hwnd, modifier_key_code=VK_LCONTROL):
-            press_key(hwnd, key_code=ord('M'))
+            press_char(hwnd, 'm')
 
     @staticmethod
     def is_shrinked(hwnd):
@@ -52,7 +52,7 @@ class UserObserverScript(CustomScriptAbstract):
             with switch_focus_window(hwnd):
                 self.mute_tab(hwnd)
                 # relies on userscript auto start by s
-                press_key(hwnd, ord('R'))
+                press_char(hwnd, 'r', only_down=False)
             self.keys_passed[hwnd] = True
 
         req = try_get_caption_request(hwnd)

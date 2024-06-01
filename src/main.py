@@ -11,6 +11,7 @@ if __name__ == '__main__':
 
     user_observer_script = UserObserverScript(disable_if_maximized=True,
                                               intervals_sec=0.1,
+                                              initial_caption_filters=['lichess'],
                                               proc_filters=["chrome.exe", "firefox.exe"])
     observer = BrowserObserver(user_observer_script,
                                ignore_exceptions=[MissingWindowFocusException],

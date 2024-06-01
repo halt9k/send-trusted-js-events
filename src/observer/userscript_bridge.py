@@ -1,11 +1,11 @@
 from enum import Enum
 from typing import Any, Callable
 
-from win32con import VK_LCONTROL
+from win32con import VK_LCONTROL, VK_RETURN
 
-from helpers.winapi.hotkey_events import press_key, press_modifier
+from helpers.winapi.hotkey_events import press_key, press_modifier, press_char
 from helpers.winapi.mouse_events import send_click
-from helpers.winapi.windows import get_title, set_title
+from helpers.winapi.windows import get_title, set_title, switch_focus_window
 
 # Common for UserScript and Observer
 # Expected browser tab titles set by UserScript:
@@ -25,29 +25,28 @@ CTRL_MODIFIER = 'Ctrl+'
 def process_click(hwnd: int, args: str) -> bool:
     coords = [int(float(s)) for s in args.split()]
     if not coords:
-        return False
+        raise Exception("Incorrect command")
 
     assert len(coords) == 2
-    send_click(hwnd, coords[0], coords[1])
-    return True
+    return send_click(hwnd, coords[0], coords[1])
 
 
-def ensure_simple_key_code(key_code):
-    return 'a' < key_code < 'z' or 'A' < key_code < 'Z'
-
-
-# TODO other reqs
 def process_hotkey(hwnd: int, args: str) -> bool:
     hotkeys = [s for s in args.split()]
-    for key in hotkeys:
-        if ensure_simple_key_code(key):
-            press_key(hwnd, ord(key))
-        elif CTRL_MODIFIER in key:
-            assert len(key) == 6
-            key = key[-1]
-            ensure_simple_key_code(key)
-            with press_modifier(hwnd, VK_LCONTROL):
-                press_key(hwnd, ord(key))
+    for char in hotkeys:
+        if char == 'Space':
+            char = ' '
+
+        if len(char) == 1:
+            with switch_focus_window(hwnd):
+                press_char(hwnd, char)
+        elif char == 'Enter':
+            press_key(hwnd, VK_RETURN, True)
+        elif CTRL_MODIFIER in char:
+            assert len(char) == 6
+            char = char[-1]
+            with switch_focus_window(hwnd), press_modifier(hwnd, VK_LCONTROL):
+                press_char(hwnd, char)
         else:
             raise NotImplementedError
     return True

@@ -117,4 +117,6 @@ class BrowserObserver:
                 self.process_running_modules()
             else:
                 print('Userscrript requested skip, observer is idle.')
+            if self.observations_count % 100 == 0:
+                print(f'Obserwer is active. Observations count: {self.observations_count}')
             self.observations_count += 1

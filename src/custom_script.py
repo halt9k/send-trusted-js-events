@@ -5,7 +5,8 @@ from time import sleep
 
 from code_tools.virtual_methods import override
 from helpers.winapi.hotkey_events import press_key, press_modifier
-from helpers.winapi.windows import shrink_and_arrange, get_window_state, get_title, switch_focus_window, is_active_window_maxed, is_window_closed
+from helpers.winapi.windows import shrink_and_arrange, get_window_state, get_title, switch_focus_window, \
+    is_active_window_maxed, is_window_closed, safe_call
 from observer.userscript_bridge import try_get_caption_request
 from observer.custom_script_abstract import CustomScriptAbstract
 
@@ -41,6 +42,6 @@ class UserObserverScript(CustomScriptAbstract):
     def on_loop_sleep(self) -> bool:
         sleep(self.intervals_sec)
         if self.disable_if_maximized:
-            return is_active_window_maxed(self.on_process_module_filter)
+            return safe_call(lambda: is_active_window_maxed(self.on_process_module_filter), False)
         else:
             return True

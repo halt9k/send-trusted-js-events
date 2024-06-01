@@ -6,18 +6,43 @@ from win32api import *
 from helpers.winapi.windows import unsafe_sleep
 
 
-def press_key(hwnd, key_code, delay_sec=0.1):
+def press_key(hwnd, key_code, only_down, delay_sec=0.1):
     """
     Can send standard keys, requres focus when multiple tabs opened
     key_code: can be ord('M'), ord('r'), ...
+    only_down: during tests WM_KEYUP fired 2nd press, not clear why
     """
 
     # specifically for browsers with multiple tabs,
     # PostMessage requres focus active or it may send to the wrong tab
-    with unsafe_sleep(0, hwnd, require_active=True, keep_state=True):
+    with unsafe_sleep(delay_sec, hwnd, require_active=True, keep_state=True):
         PostMessage(hwnd, WM_KEYDOWN, key_code, 0)
+
+    if only_down:
+        return
+
     with unsafe_sleep(delay_sec, hwnd, require_active=True, keep_state=True):
         PostMessage(hwnd, WM_KEYUP, key_code, 0)
+
+
+def virtual_code(char):
+    assert len(char) == 1
+    # Not working
+    # Extract virtual-key code from the result (low byte) and apply shift state
+    # shift_state = not char.islower()
+    # (virtual_key_code & 0xFF) | (shift_state << 8)
+    # virtual_key_code = VkKeyScan(char) & 0xFF
+    return VkKeyScan(char) & 0xFF
+
+
+def press_char(hwnd, char: str, only_down=True, delay_sec=0.1):
+    if 'a' < char < 'z' or '0' < char < '9' or char in [' ']:
+        press_key(hwnd, virtual_code(char), only_down, delay_sec)
+    elif 'A' < char < 'Z':
+        with press_modifier(hwnd, VK_LSHIFT):
+            press_key(hwnd, virtual_code(char), only_down, delay_sec)
+    else:
+        raise NotImplementedError
 
 
 @contextmanager

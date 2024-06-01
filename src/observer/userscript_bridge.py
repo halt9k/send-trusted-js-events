@@ -25,10 +25,11 @@ CTRL_MODIFIER = 'Ctrl+'
 def process_click(hwnd: int, args: str) -> bool:
     coords = [int(float(s)) for s in args.split()]
     if not coords:
-        raise Exception("Incorrect command")
+        return False
 
     assert len(coords) == 2
-    return send_click(hwnd, coords[0], coords[1])
+    send_click(hwnd, coords[0], coords[1])
+    return True
 
 
 def ensure_simple_key_code(key_code):

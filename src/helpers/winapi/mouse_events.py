@@ -32,13 +32,12 @@ def send_click(hwnd, x, y):
     cl, ct, cr, cb = GetClientRect(hwnd)
     cw, ch = cr - cl, cb - ct
 
-    if not cl < cx < cr or not ct < cy < cb:
-        print(f'Warning: click request outside of client area, skipped. cx cy: {cx} {cy}')
-        # print(f'Relative to window: x y: {x} {y}')
-        # print(f'Relative to client: cx cy: {cx} {cy}, cw ch: {cw} {ch}')
-        return False
+    if x not in [cl, cr] or y not in [ct, cb]:
+        print(f'Warning: click request outside of client area, skipped.')
+        print(f'Relative to window: x y: {x} {y}')
+        print(f'Relative to client: cx cy: {cx} {cy}, cw ch: {cw} {ch}')
+        return
 
     print(f'Sending mouse click to Window xy: {x} {y} Screen xy: {cx} {cy}')
     win32api.PostMessage(hwnd, WM_LBUTTONDOWN, 1, make_lparam(cx, cy))
     win32api.PostMessage(hwnd, WM_LBUTTONUP, 0, make_lparam(cx, cy))
-    return True

@@ -62,7 +62,7 @@ def process_hotkeys(hwnd: int, args: str) -> bool:
     except Exception as e:
         if len(hotkeys) > 1:
             print(e)
-            raise BatchHotkeyFailureException("Not a default retry safe exception while chain of input")
+            raise BatchHotkeyFailureException("Exception during input of multiple keys. Not retry safe by default.")
         else:
             # Retry safe, so script can try to recover trying again
             raise

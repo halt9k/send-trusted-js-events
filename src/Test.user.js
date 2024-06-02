@@ -21,6 +21,7 @@
 // "div.RNNXgb" ?
 const CSS_SEL_GOOGLE_SEARCH = 'textarea#APjFqb.gLFyf'
 const CSS_SEL_GOOGLE_SEARCH_BTN = ".FPdoLc"
+const CSS_SEL_GOOGLE_SEARCH_DROPDOWN_LIST = "#Alh6id"
 const CSS_SEL_GOOGLE_SEARCH_DROPDOWN_BTN = "input.gNO89b[value='Google Search']"
 const CSS_SEL_GOOGLE_LOGO = ".lnXdpd"
 
@@ -31,7 +32,7 @@ const NEW_WINDOW_TITLE = 'RUN'
 
 
 function log_ex(message, loc) {
-	// location parametr is not yet working as expected link to source line, but better than nothing
+	// location parameter is not yet working as expected link to source line, but better than nothing
 
 	const sourceUrl = `${loc.origin}${loc.pathname}`;
     const log_exMessage = `%c${message} %c@${sourceUrl}`;
@@ -82,7 +83,7 @@ async function waitUntil(untilFunc, maxTimeoutSec=10, intervalsSec=0.2) {
         if (untilFunc())
             return;
 		if (i % 50 == 0)
-			log_ex(`Waiting for winapi command fired extrernally ${i * intervalsSec}s`, location);
+			log_ex(`Waiting for winapi command fired externally ${i * intervalsSec}s`, location);
 		}
 }
 
@@ -120,23 +121,33 @@ async function trustedSelect(selector)
 async function main()
 	{
 	// Not required since google auto focuses on the search,
-	// but focus switch just to ensure clciks are working correctly
-	let logo = unsafeQuerySelector(CSS_SEL_GOOGLE_LOGO);
-	requestTrustedClick(logo);
-	await waitUntil(() => inFocusedTree(logo));
+	// but focus switch just to ensure clicks are working correctly
+	// let logo = unsafeQuerySelector(CSS_SEL_GOOGLE_LOGO);
+	// requestTrustedClick(logo);
+	// await waitUntil(() => inFocusedTree(logo));
 
 	let search = unsafeQuerySelector(CSS_SEL_GOOGLE_SEARCH);
 	requestTrustedClick(search);
 	await waitUntil(() => inFocusedTree(search));
 
-    await requestTrustedKeys(search, 'H e l l o Space W o r l d');
+	// First letter cause drop-down, so requested separately
+    await requestTrustedKeys(search, 'H');
+	await waitUntil(() => search.textLength == 'H'.length);
+	await waitUntil(() => !!document.querySelector(CSS_SEL_GOOGLE_SEARCH_DROPDOWN_LIST));
+
+    await requestTrustedKeys(search, 'e l l o Space W o r l d');
 	await waitUntil(() => search.textLength == 'Hello World'.length);
 
-    await requestTrustedKeys(search, 'Enter');
-	let prevTitle = document.title;
-    await waitUntil(() => document.title != prevTitle);
+	// Enter can be requested to fire search, but it's more unusual to send with background click
+    // await requestTrustedKeys(search, 'Enter');
+	await waitUntil(() => sleep(1000));
 
-	log_ex('Demo script probably worked as expected', location)
+	let search_btn = unsafeQuerySelector(CSS_SEL_GOOGLE_SEARCH_DROPDOWN_BTN);
+	let prevTitle = document.title;
+	requestTrustedClick(search_btn);
+	await waitUntil(() => document.title != prevTitle);
+
+	log_ex('Page changed - script probably worked as expected', location)
 	}
 
 

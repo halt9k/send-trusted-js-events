@@ -38,7 +38,7 @@ def send_click(hwnd, x, y):
         # print(f'Relative to client: cx cy: {cx} {cy}, cw ch: {cw} {ch}')
         return False
 
-    print(f'Sending mouse click to Window xy: {x} {y} Screen xy: {cx} {cy}')
+    print(f'Sending mouse click to Window xy: {x} {y} Client xy: {cx} {cy}')
     win32api.PostMessage(hwnd, WM_LBUTTONDOWN, 1, make_lparam(cx, cy))
     win32api.PostMessage(hwnd, WM_LBUTTONUP, 0, make_lparam(cx, cy))
     return True

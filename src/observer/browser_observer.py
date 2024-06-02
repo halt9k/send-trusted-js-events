@@ -1,26 +1,26 @@
-import datetime
+from datetime import datetime
 from dataclasses import dataclass
-from typing import Type
+from typing import Type, Dict
 
 import pywintypes
 
 from helpers.winapi.windows import get_title, is_window_closed
-from observer.userscript_bridge import process_caption, try_get_caption_request
+from observer.userscript_bridge import process_caption
 from src.observer.custom_script_abstract import CustomScriptAbstract
 from helpers.winapi.processes import get_module_paths, get_process_windows
 
 
 @dataclass
 class TabInfo:
-    last_text: str = ''
-    total_clicks: int = 0
-    last_click_ms: datetime.datetime = datetime.datetime.now()
-    closed: bool = False
+    last_finished_title: str = ''
+    requests_finished: int = 0
+    last_message_ms: datetime = datetime.now()
     initialized: bool = False
+    added: datetime = None
 
 
 class BrowserObserver:
-    known_windows = {}
+    known_windows: Dict[int, TabInfo] = {}
     observations_count = 0
 
     def __init__(self, user_script: CustomScriptAbstract,
@@ -48,21 +48,21 @@ class BrowserObserver:
         return len(pop_keys)
 
     def deliver_caption_requests(self, hwnd):
-        if self.known_windows[hwnd].last_text == get_title(hwnd):
+        title = get_title(hwnd)
+        if self.known_windows[hwnd].last_finished_title == title:
             return
 
         if process_caption(hwnd):
-            self.known_windows[hwnd].last_message_ms = datetime.datetime.now()
-            self.known_windows[hwnd].total_messages_send += 1
-            self.known_windows[hwnd].last_text = get_title(hwnd)
+            self.known_windows[hwnd].last_message_ms = datetime.now()
+            self.known_windows[hwnd].requests_finished += 1
+            self.known_windows[hwnd].last_finished_title = title
 
     def initialize_window(self, hwnd):
         if hwnd not in self.known_windows.keys():
             self.known_windows[hwnd] = TabInfo()
 
             self.known_windows[hwnd].initialized = False
-            self.known_windows[hwnd].added = datetime.time()
-            self.known_windows[hwnd].total_messages_send = 0
+            self.known_windows[hwnd].added = datetime.now()
 
         elif not self.known_windows[hwnd].initialized:
             if self.user_script.on_initial_window_setup(hwnd):
@@ -76,7 +76,7 @@ class BrowserObserver:
 
         initialized_windows = [key for key, val in self.known_windows.items() if val.initialized]
         n = initialized_windows.index(hwnd)
-        self.user_script.on_custom_processing(hwnd, n, self.known_windows[hwnd].total_messages_send)
+        self.user_script.on_custom_processing(hwnd, n, self.known_windows[hwnd].requests_finished)
 
         self.deliver_caption_requests(hwnd)
 

@@ -1,7 +1,6 @@
 import ctypes
 from contextlib import contextmanager
 from enum import Enum
-from functools import wraps
 from time import sleep
 
 import win32con
@@ -26,6 +25,11 @@ def get_dims(hwnd):
     w = right - left
     h = bottom - top
     return w, h
+
+
+def verboose_sleep(sec):
+    print(f"Sleep {sec}")
+    sleep(sec)
 
 
 def shrink_and_arrange(hwnd, n, shrinked_width, shrinked_height):
@@ -57,42 +61,43 @@ def shrink_and_arrange(hwnd, n, shrinked_width, shrinked_height):
 
 
 @contextmanager
-def unsafe_sleep(delay, hwnd, require_active=False, keep_state=False):
+def hwnd_unsafe_op(post_delay, hwnd, require_focus=False, keep_state=False):
     # reminder: during sleep windows can be closed, moved, trayed, switched
 
-    if require_active and win32gui.GetForegroundWindow() != hwnd:
-        raise MissingWindowFocusException(f'Window inactive at sleep start: {hwnd}')
-
-    state = get_window_state(hwnd) if keep_state else None
-
-    if delay > 0:
-        print(f"Sleep {delay}")
-        sleep(delay)
+    if require_focus and win32gui.GetForegroundWindow() != hwnd:
+        raise MissingWindowFocusException(f'Window inactive unexpectedly: {hwnd}')
 
     if is_window_closed(hwnd):
-        raise Exception(f'Window closed while sleep: {hwnd}')
+        raise Exception(f'Window closed unexpectedly: {hwnd}')
 
+    yield
+
+    if post_delay < 0:
+        return
+
+    state = get_window_state(hwnd) if keep_state else None
+    verboose_sleep(post_delay)
     if keep_state and state != get_window_state(hwnd):
         raise Exception(f'Window changed state while sleep: {hwnd}')
 
-    if require_active and win32gui.GetForegroundWindow() != hwnd:
+    if require_focus and win32gui.GetForegroundWindow() != hwnd:
         raise MissingWindowFocusException(f'Window went inactive while sleep: {hwnd}')
-    yield
 
 
 @contextmanager
-def switch_focus_window(hwnd, post_delay=0.15):
+def switch_focus_window(hwnd, delay=0.1):
     prev_hwnd = win32gui.GetForegroundWindow()
 
     if prev_hwnd != hwnd:
         pyautogui.press("alt")
         win32gui.SetForegroundWindow(hwnd)
-
-        sleep(post_delay)
+        verboose_sleep(delay)
 
     if win32gui.GetForegroundWindow() == hwnd:
         yield
-        win32gui.SetForegroundWindow(prev_hwnd)
+        if prev_hwnd != hwnd:
+            win32gui.SetForegroundWindow(prev_hwnd)
+            verboose_sleep(delay)
     else:
         raise MissingWindowFocusException(f'Window activation failed: {hwnd}')
 
@@ -118,7 +123,7 @@ def get_title(hwnd):
 
 
 def set_title(hwnd, title):
-    # TODO fails on chrome
+    """ Be aware that userscript cannot read this though """
     win32gui.SetWindowText(hwnd, title)
 
 

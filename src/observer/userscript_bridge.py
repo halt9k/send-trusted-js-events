@@ -22,6 +22,10 @@ ERASE_TEXT = [' — Mozilla Firefox', ' - Google Chrome']
 CTRL_MODIFIER = 'Ctrl+'
 
 
+class BatchHotkeyFailureException(Exception):
+    pass
+
+
 def process_click(hwnd: int, args: str) -> bool:
     coords = [int(float(s)) for s in args.split()]
     if not coords:
@@ -31,61 +35,78 @@ def process_click(hwnd: int, args: str) -> bool:
     return send_click(hwnd, coords[0], coords[1])
 
 
-def process_hotkey(hwnd: int, args: str) -> bool:
-    hotkeys = [s for s in args.split()]
-    for char in hotkeys:
-        if char == 'Space':
-            char = ' '
+def process_hotkey(hwnd: int, char: str) -> bool:
+    if char == 'Space':
+        char = ' '
 
-        if len(char) == 1:
-            with switch_focus_window(hwnd):
-                press_char(hwnd, char)
-        elif char == 'Enter':
-            press_key(hwnd, VK_RETURN, True)
-        elif CTRL_MODIFIER in char:
-            assert len(char) == 6
-            char = char[-1]
-            with switch_focus_window(hwnd), press_modifier(hwnd, VK_LCONTROL):
-                press_char(hwnd, char)
-        else:
-            raise NotImplementedError
+    if len(char) == 1:
+        press_char(hwnd, char)
+    elif char == 'Enter':
+        press_key(hwnd, VK_RETURN, True)
+    elif char.startswith(CTRL_MODIFIER):
+        assert len(char) == 6
+        char = char[-1]
+        with press_modifier(hwnd, VK_LCONTROL):
+            press_char(hwnd, char)
+    else:
+        raise NotImplementedError
     return True
 
 
-def try_get_caption_request(hwnd):
-    title: str = get_title(hwnd)
-    found_keys = [key for key in req_handlers.keys() if title.startswith(key)]
+def process_hotkeys(hwnd: int, args: str) -> bool:
+    hotkeys = [s for s in args.split()]
+    try:
+        with switch_focus_window(hwnd):
+            for hotkey in hotkeys:
+                process_hotkey(hwnd, hotkey)
+    except Exception as e:
+        if len(hotkeys) > 1:
+            print(e)
+            raise BatchHotkeyFailureException("Not a default retry safe exception while chain of input")
+        else:
+            # Retry safe, so script can try to recover trying again
+            raise
+    return True
 
+
+def try_get_caption_request(hwnd) -> (str, str):
+    title: str = get_title(hwnd)
+    for rep in ERASE_TEXT:
+        title = title.replace(rep, '')
+
+    found_keys = [key for key in req_handlers.keys() if title.startswith(key)]
     if len(found_keys) > 2:
         raise Exception("Userscript placed ambiguous caption commands")
     elif len(found_keys) == 1:
-        return found_keys[0]
+        req = found_keys[0]
+        args = title.replace(req, '')
+        return req, args
     else:
-        return None
+        return None, None
 
 
 def process_caption(hwnd) -> bool:
     """ Returns True is request was detected and delivered"""
 
-    req = try_get_caption_request(hwnd)
+    req, args = try_get_caption_request(hwnd)
     if not req:
         return False
-
-    msg = get_title(hwnd)
-    for rep in ERASE_TEXT:
-        msg = msg.replace(rep, '')
-    args = msg.replace(req, '')
 
     req_handler: Callable[[int, str], bool] = req_handlers[req]
     if not req_handler:
         raise NotImplementedError
 
-    print(f'Delivering trusted input to {hwnd}, command is {msg}')
+    print(f'Delivering trusted input to {hwnd}, command is {req}{args}')
+    title = get_title(hwnd)
     res = req_handler(hwnd, args)
     if res:
-        set_title(hwnd, DONE)
+        title_new = get_title(hwnd)
+        if title == title_new:
+            set_title(hwnd, DONE)
+        else:
+            print('Skipping DONE confirmaton due to new command requested')
     return res
 
 
 req_handlers[REQ_CLICK] = process_click
-req_handlers[REQ_KEYS] = process_hotkey
+req_handlers[REQ_KEYS] = process_hotkeys

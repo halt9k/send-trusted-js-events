@@ -63,7 +63,7 @@ def shrink_and_arrange(hwnd, n, shrinked_width, shrinked_height):
 @contextmanager
 def hwnd_unsafe_op(post_delay, hwnd, require_focus=False, keep_state=False):
     # reminder: during sleep windows can be closed, moved, trayed, switched
-
+    require_focus = False
     if require_focus and win32gui.GetForegroundWindow() != hwnd:
         raise MissingWindowFocusException(f'Window inactive unexpectedly: {hwnd}')
 
@@ -90,13 +90,13 @@ def switch_focus_window(hwnd, delay=0.1):
 
     if prev_hwnd != hwnd:
         pyautogui.press("alt")
-        win32gui.SetForegroundWindow(hwnd)
+        # win32gui.SetForegroundWindow(hwnd)
         verboose_sleep(delay)
 
-    if win32gui.GetForegroundWindow() == hwnd:
+    if win32gui.GetForegroundWindow() == hwnd or True:
         yield
         if prev_hwnd != hwnd:
-            win32gui.SetForegroundWindow(prev_hwnd)
+            # win32gui.SetForegroundWindow(prev_hwnd)
             verboose_sleep(delay)
     else:
         raise MissingWindowFocusException(f'Window activation failed: {hwnd}')

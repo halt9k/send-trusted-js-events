@@ -131,6 +131,7 @@ def is_window_closed(hwnd):
     return not win32gui.IsWindow(hwnd)
 
 
+# TODO update, real name is is_any_window_maxed
 def is_active_window_maxed(proc_filter_func) -> bool:
     hwnd = win32gui.GetForegroundWindow()
     if not hwnd:

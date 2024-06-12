@@ -9,6 +9,9 @@ from sys import path
  ./<main launch files>
  ./src/*.py
  ./data/*
+
+ Import without warning:
+ from helpers import os_helpers  # noqa: F401
 """
 
 

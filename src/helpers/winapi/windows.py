@@ -3,6 +3,7 @@ from contextlib import contextmanager
 from enum import Enum
 from time import sleep
 
+# install win32con via conda pywin32
 import win32con
 import win32gui
 import pyautogui

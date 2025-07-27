@@ -464,7 +464,33 @@ function getRandomInt(min, max)
 	}
 
 
-function try_move_new_tab(){
+async function close_if_active(wnd){
+    // workaround to check if 2nd window is not locked, if 2nd is locked, pos wont change
+
+    let pos_changed = 0
+    let prev_board_squares = board_squares
+
+	for (let i = 0; i < 400; i++)
+		{
+		await sleep(200)
+        log_ex('cycle n is ' + i, location)
+        UpdateStates()
+        if (prev_board_squares.toString() !== board_squares.toString()) {
+            pos_changed++
+            prev_board_squares = board_squares
+        }
+
+	    if (pos_changed > 2) {
+            log_ex('close granted for ' + wnd, location)
+            wnd.close()
+            return
+            }
+		}
+    log_ex('close did not happened for ' + wnd, location)
+}
+
+
+async function try_move_new_tab(){
     if (window.outerWidth < (ARRANGE_WIDTH + 10) || window.outerHeight < (ARRANGE_HEIGHT + 10))
 		return
 
@@ -479,7 +505,7 @@ function try_move_new_tab(){
 
 	if (wnd){
 		window.open("https://lichess.org/", "")
-		window.close()
+        close_if_active(window)
     }
 }
 

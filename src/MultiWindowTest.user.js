@@ -1,11 +1,11 @@
 // ==UserScript==
-// @name         Auto Play
-// @namespace    http://tampermonkey.net/
-// @version      0.9
+// @name		 Auto Play
+// @namespace	http://tampermonkey.net/
+// @version	  0.9
 // @description  try to take over the world!
-// @author       You
-// @icon         data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==
-// @match        https://lichess.org/*
+// @author	   You
+// @icon		 data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==
+// @match		https://lichess.org/*
 // @grant unsafeWindow
 // @grant window.close
 // @grant window.focus
@@ -17,6 +17,9 @@
 // @run-at  context-menu
 // @run-at  page-load
 // ==/UserScript==
+
+// debug will work if page is updated via right click: debug + click in logs: console.log('DEBUGGER')
+
 
 var side = 0;
 var last_selected_value = 0
@@ -31,14 +34,19 @@ const SCREEN_RATIO = window.devicePixelRatio
 const ARRANGE_WIDTH = 350 / SCREEN_RATIO, ARRANGE_HEIGHT = 510 / SCREEN_RATIO
 const TOOLBAR_HEIGHT = 50 / SCREEN_RATIO
 
+// Scrollbar may affect this, dunno
+const BUGGED_OUTER_WIDTH_PX = 16
+const BUGGED_OUTER_HEIGHT_PX = 9
+const DEBUG_KEEP_WINDOW = false
+
 
 function try_mute()
 	{
 	// lichess.sound.setVolume(0);
-    document.querySelectorAll('audio, video').forEach(item => {
-        item.muted = true;
-        item.pause();
-    });
+	document.querySelectorAll('audio, video').forEach(item => {
+		item.muted = true;
+		item.pause();
+	});
 	}
 
 //mousedown { target: cg-board, buttons: 1, clientX: 824, clientY: 289, layerX: 67, layerY: 249 }
@@ -47,8 +55,8 @@ function try_mute()
 
 function log_ex(message, loc) {
 	const sourceUrl = `${loc.origin}${loc.pathname}`;
-    const log_exMessage = `%c${message} %c@${sourceUrl}`;
-    console.log(log_exMessage, 'color: blue;', 'color: green;');
+	const log_exMessage = `%c${message} %c@${sourceUrl}`;
+	console.log(log_exMessage, 'color: blue;', 'color: green;');
 }
 
 
@@ -75,11 +83,11 @@ function get_transformed_pos(elem, posAtMiddle)
 
 
 function roundIfClose(val, allowedDist) {
-    let valInt = Math.round(val)
-    if (Math.abs(val - valInt) < allowedDist)
-        return valInt
-    else
-        return undefined
+	let valInt = Math.round(val)
+	if (Math.abs(val - valInt) < allowedDist)
+		return valInt
+	else
+		return undefined
 }
 
 
@@ -87,10 +95,10 @@ function try_get_board_square_ij(elem){
 	// i, j 1-8
 	let pos_px = get_transformed_pos(elem, false)
 	let sz = get_square_size();
-    let pos = {
-        x: roundIfClose(pos_px.x / sz.x, 0.01),
-        y: roundIfClose(pos_px.y / sz.y, 0.01)
-    }
+	let pos = {
+		x: roundIfClose(pos_px.x / sz.x, 0.01),
+		y: roundIfClose(pos_px.y / sz.y, 0.01)
+	}
 
 	if (pos.x && pos.y)
 		return pos
@@ -102,22 +110,29 @@ function try_get_board_square_ij(elem){
 function getClientPosPx(elem, posAtMiddle){
 	// Returns approximate position in pixels (px) relative to window corner
 
+	// left top piece
+	// elem = query_selector('.ghost')
+	// menu in the very left top corner
+	// elem = query_selector('.hbg')
+
 	let rect = elem.getBoundingClientRect();
 	let screen_scale = window.devicePixelRatio;
 
 	// relative to page corner
-	// (not from window corner, skips window menu area)
+	// (not from window corner, skips title and menu area with https)
 	let elem_x_px = (posAtMiddle? (rect.left + rect.right) / 2 : rect.x) * screen_scale;
 	let elem_y_px = (posAtMiddle? (rect.bottom + rect.top) / 2 : rect.y) * screen_scale;
 
 	// page corner relative to window corner
-	let page_x_px = (window.outerWidth - window.innerWidth)/2 * screen_scale;
-	let page_y_px = (window.outerHeight - window.innerHeight) * screen_scale;
+	let page_x_px = (window.outerWidth - BUGGED_OUTER_WIDTH_PX - window.innerWidth)/2 * screen_scale;
+	let page_y_px = (window.outerHeight - BUGGED_OUTER_HEIGHT_PX- window.innerHeight) * screen_scale;
 
 	let x = Math.round(page_x_px + elem_x_px);
 	let y = Math.round(page_y_px + elem_y_px);
 
-	return {x:x, y:y}
+	let ret = {x:x, y:y}
+	console.debug('getClientPosPx ', ret);
+	return ret
 }
 
 
@@ -167,10 +182,10 @@ function press_on_board(elem, x, y) {
 
 function click_board_element(elem)
 	{
-    let ij = try_get_board_square_ij(elem);
+	let ij = try_get_board_square_ij(elem);
 	if (!ij)
 		return;
-	log_ex('click on: ' + ij.x + ' ' + ij.y, location);
+	log_ex('click on (zero-indexed): ' + ij.x + ' ' + ij.y, location);
 
 	// let xy = randomOffset(getScreenPosPx(elem, true), 5)
 	let xy = randomOffset(getClientPosPx(elem, true), 5)
@@ -206,11 +221,11 @@ function detect_player_side()
 
 function is_opponent_active(){
 	try{
-        return document.querySelectorAll(CSS_SEL_OPPONENT_LEFT)[0].title != "Left the game"
-    }
-    catch{
-        return true
-    }
+		return document.querySelectorAll(CSS_SEL_OPPONENT_LEFT)[0].title != "Left the game"
+	}
+	catch{
+		return true
+	}
 }
 
 
@@ -324,6 +339,8 @@ function TryPrioritySelect()
 
 function TrySelect()
 	{
+	console.debug('my pieces are: ', my_pieces)
+
 	if (my_pieces.length > 0)
 		{
 		// log_ex('clicking_random_piece', location)
@@ -352,13 +369,13 @@ function UpdateStates()
 
 	let whites = document.querySelectorAll("piece.white:not(piece.ghost)");
 	let blacks = document.querySelectorAll("piece.black:not(piece.ghost)");
-    all_pieces = document.querySelectorAll("piece.white:not(piece.ghost),piece.black:not(piece.ghost)");
+	all_pieces = document.querySelectorAll("piece.white:not(piece.ghost),piece.black:not(piece.ghost)");
 
-    my_pieces = all_pieces;
+	my_pieces = all_pieces;
 	if (side === -1)
-        my_pieces = blacks;
+		my_pieces = blacks;
 	if (side === 1)
-        my_pieces = whites;
+		my_pieces = whites;
 
 	// log_ex(board_squares, location);
 	for (const pce of all_pieces){
@@ -377,12 +394,27 @@ function UpdateStates()
 	}
 
 
+function query_visible_class(selector)
+	{
+	let arr = Array.from(document.getElementsByClassName(selector));
+	return arr.filter(el => getComputedStyle(el).visibility === 'visible');
+	}
+
+
 var could_move = false
 function TryMove(board_squares)
 	{
-	let places = document.getElementsByClassName("move-dest");
+	let places = query_visible_class('move-dest');
+	console.debug('move targets are: ', places)
 
-	let can_move = (places.length !== 0)
+	// to pinpoint case when something is selected on the board (vs incorrect leftovers) seems that one works
+	// while .selected is not cleaned properly
+	let selected = query_visible_class('selected');
+
+	console.debug('currently selected and visible: ', selected)
+
+	let can_move = (selected && selected.length > 0 && places && places.length > 0)
+	console.debug('can_move', can_move)
 	if (could_move !== can_move)
 		{
 		if (!could_move)
@@ -448,7 +480,7 @@ function MakeRandomMove()
 	{
 	move_info = '';
 	detect_player_side();
-    UpdateStates();
+	UpdateStates();
 
 	// log_ex(board_squares, location)
 
@@ -465,33 +497,33 @@ function getRandomInt(min, max)
 
 
 async function close_if_active(wnd){
-    // workaround to check if 2nd window is not locked, if 2nd is locked, pos wont change
+	// workaround to check if 2nd window is not locked, if 2nd is locked, pos wont change
 
-    let pos_changed = 0
-    let prev_board_squares = board_squares
+	let pos_changed = 0
+	let prev_board_squares = board_squares
 
 	for (let i = 0; i < 400; i++)
 		{
 		await sleep(200)
-        log_ex('cycle n is ' + i, location)
-        UpdateStates()
-        if (prev_board_squares.toString() !== board_squares.toString()) {
-            pos_changed++
-            prev_board_squares = board_squares
-        }
-
-	    if (pos_changed > 2) {
-            log_ex('close granted for ' + wnd, location)
-            wnd.close()
-            return
-            }
+		log_ex('cycle n is ' + i, location)
+		UpdateStates()
+		if (prev_board_squares.toString() !== board_squares.toString()) {
+			pos_changed++
+			prev_board_squares = board_squares
 		}
-    log_ex('close did not happened for ' + wnd, location)
+
+		if (pos_changed > 2) {
+			log_ex('close granted for ' + wnd, location)
+			wnd.close()
+			return
+			}
+		}
+	log_ex('close did not happened for ' + wnd, location)
 }
 
 
 async function try_move_new_tab(){
-    if (window.outerWidth < (ARRANGE_WIDTH + 10) || window.outerHeight < (ARRANGE_HEIGHT + 10))
+	if (window.outerWidth < (ARRANGE_WIDTH + 10) || window.outerHeight < (ARRANGE_HEIGHT + 10))
 		return
 
 	log_ex('open_new_tab', location)
@@ -505,23 +537,23 @@ async function try_move_new_tab(){
 
 	if (wnd){
 		window.open("https://lichess.org/", "")
-        close_if_active(window)
-    }
+		close_if_active(window)
+	}
 }
 
 
 
 function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+	return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 
 var auto_play_start_time
 async function run_loop()
 	{
-    try_move_new_tab()
+	try_move_new_tab()
 
-    log_ex('run_loop', location)
+	log_ex('run_loop', location)
 
 	auto_play_start_time = new Date()
 
@@ -529,24 +561,27 @@ async function run_loop()
 	for (let i = -5; i < 5000; i++)
 		{
 		if (!check_opponent(auto_play_start_time))
-			window.close()
+			if (DEBUG_KEEP_WINDOW)
+				console.log('Closing window is disabled.');
+			else
+				window.close();
 
 
-		await sleep(Math.pow(i, 1.7) * 200 )
+		await sleep(Math.pow(i, 1.6) * 200 )
 		MakeRandomMove()
 		}
 	}
 
 
 function doc_keyUp(e) {
-    switch (e.keyCode) {
-        case 82:
-            //r, not s, not m
-            run_loop();
-            break;
-        default:
-            break;
-    }
+	switch (e.keyCode) {
+		case 82:
+			//r, not s, not m
+			run_loop();
+			break;
+		default:
+			break;
+	}
 }
 
 
@@ -555,7 +590,7 @@ document.addEventListener('keyup', doc_keyUp, false);
 
 
 function is_maximized() {
-    var is_max = screen.availWidth - window.innerWidth === 0;
+	var is_max = screen.availWidth - window.innerWidth === 0;
 	log_ex('is_max: ' + is_max, location);
 	return is_max;
 }

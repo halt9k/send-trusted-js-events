@@ -19,6 +19,7 @@
 // ==/UserScript==
 
 // debug will work if page is updated via right click: debug + click in logs: console.log('DEBUGGER')
+// set Inject Mode: instant in tapermonkey experimental options
 
 
 var side = 0;
@@ -38,6 +39,8 @@ const TOOLBAR_HEIGHT = 50 / SCREEN_RATIO
 const BUGGED_OUTER_WIDTH_PX = 16
 const BUGGED_OUTER_HEIGHT_PX = 9
 const DEBUG_KEEP_WINDOW = false
+
+"use strict";
 
 
 function try_mute()
@@ -91,6 +94,9 @@ function roundIfClose(val, allowedDist) {
 }
 
 
+function isNumber(n) { return !isNaN(parseFloat(n)) && !isNaN(n - 0) }
+
+
 function try_get_board_square_ij(elem){
 	// i, j 1-8
 	let pos_px = get_transformed_pos(elem, false)
@@ -100,7 +106,7 @@ function try_get_board_square_ij(elem){
 		y: roundIfClose(pos_px.y / sz.y, 0.01)
 	}
 
-	if (pos.x && pos.y)
+	if (isNumber(pos.x) && isNumber(pos.y))
 		return pos
 	else
 		return undefined
@@ -302,7 +308,7 @@ function TryPrioritySelect()
 		{
 		let pos = try_get_board_square_ij(piece);
 		if (!pos)
-			continue
+            { continue; }
 
 		let dng = board_squares_weights[pos.x][pos.y];
 		highest_weight = Math.max(highest_weight, dng);
@@ -380,8 +386,10 @@ function UpdateStates()
 	// log_ex(board_squares, location);
 	for (const pce of all_pieces){
 		let pos = try_get_board_square_ij(pce);
-		if (!pos)
-			continue
+		if (!pos) {
+            log_ex('Cannot get board position of ', pce);
+			continue;
+        }
 
 		// pce.classname
 		// log_ex(pos, location);
@@ -397,7 +405,10 @@ function UpdateStates()
 function query_visible_class(selector)
 	{
 	let arr = Array.from(document.getElementsByClassName(selector));
-	return arr.filter(el => getComputedStyle(el).visibility === 'visible');
+    arr = arr.filter(el => getComputedStyle(el).visibility === 'visible');
+    // somewhere in 2026 elem is always visible, but style is changed to '' or 'none'
+    arr = arr.filter(el => getComputedStyle(el).display !== 'none')
+	return arr;
 	}
 
 
